@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ProgressBar } from "./progress-bar"
 import { useMobile } from "@/hooks/use-mobile"
-import type { Generation } from "./hooks/use-image-generation"
+import type { Generation } from "./types"
 import { useEffect } from "react"
 
 interface OutputSectionProps {
@@ -77,8 +77,8 @@ export function OutputSection({
   }, [generations, selectedGenerationId, setSelectedGenerationId])
 
   const generatedImage =
-    selectedGeneration?.status === "complete" && selectedGeneration.imageUrl
-      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt }
+    selectedGeneration?.status === "complete" && (selectedGeneration.imageUrl || selectedGeneration.svgCode)
+      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: selectedGeneration.svgCode }
       : null
 
   const renderButtons = (className?: string) => (
@@ -148,17 +148,28 @@ export function OutputSection({
         ) : generatedImage ? (
           <div className="absolute inset-0 flex flex-col select-none">
             <div className="flex-1 flex items-center justify-center relative group max-w-full max-h-full overflow-hidden">
-              <img
-                src={generatedImage.url || "/placeholder.svg"}
-                alt="Generated"
-                className={cn(
-                  "max-w-full max-h-full transition-all duration-700 ease-out cursor-pointer",
-                  "lg:w-full lg:h-full lg:object-contain",
-                  imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
-                )}
-                onLoad={() => setImageLoaded(true)}
-                onClick={onOpenFullscreen}
-              />
+              {generatedImage.svgCode ? (
+                <div
+                  className={cn(
+                    "max-w-full max-h-full w-full h-full flex items-center justify-center transition-all duration-700 ease-out cursor-pointer [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:h-auto",
+                    "opacity-100 scale-100",
+                  )}
+                  onClick={onOpenFullscreen}
+                  dangerouslySetInnerHTML={{ __html: generatedImage.svgCode }}
+                />
+              ) : (
+                <img
+                  src={generatedImage.url || "/placeholder.svg"}
+                  alt="Generated"
+                  className={cn(
+                    "max-w-full max-h-full transition-all duration-700 ease-out cursor-pointer",
+                    "lg:w-full lg:h-full lg:object-contain",
+                    imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
+                  )}
+                  onLoad={() => setImageLoaded(true)}
+                  onClick={onOpenFullscreen}
+                />
+              )}
             </div>
           </div>
         ) : (

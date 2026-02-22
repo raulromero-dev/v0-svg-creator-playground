@@ -103,8 +103,8 @@ export function ImageCombiner() {
   const selectedGeneration = persistedGenerations.find((g) => g.id === selectedGenerationId) || persistedGenerations[0]
   const isLoading = persistedGenerations.some((g) => g.status === "loading")
   const generatedImage =
-    selectedGeneration?.status === "complete" && selectedGeneration.imageUrl
-      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt }
+    selectedGeneration?.status === "complete" && (selectedGeneration.imageUrl || selectedGeneration.svgCode)
+      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: selectedGeneration.svgCode }
       : null
 
   const hasImages = useUrls ? image1Url || image2Url : image1 || image2
@@ -139,12 +139,12 @@ export function ImageCombiner() {
   // </CHANGE>
 
   const openFullscreen = useCallback(() => {
-    if (generatedImage?.url) {
-      setFullscreenImageUrl(generatedImage.url)
+    if (generatedImage?.svgCode || generatedImage?.url) {
+      setFullscreenImageUrl(generatedImage.svgCode || generatedImage.url || "")
       setShowFullscreen(true)
       document.body.style.overflow = "hidden"
     }
-  }, [generatedImage?.url])
+  }, [generatedImage?.url, generatedImage?.svgCode])
 
   const openImageFullscreen = useCallback((imageUrl: string) => {
     setFullscreenImageUrl(imageUrl)
@@ -161,30 +161,48 @@ export function ImageCombiner() {
   const downloadImage = useCallback(async () => {
     if (!generatedImage) return
     try {
-      const response = await fetch(generatedImage.url)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `svg-creator-${currentMode}-result.svg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      if (generatedImage.svgCode) {
+        const blob = new Blob([generatedImage.svgCode], { type: "image/svg+xml" })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `svg-creator-${currentMode}-result.svg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } else if (generatedImage.url) {
+        const response = await fetch(generatedImage.url)
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `svg-creator-${currentMode}-result.svg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      }
     } catch (error) {
-      console.error("Error downloading image:", error)
-      window.open(generatedImage.url, "_blank")
+      console.error("Error downloading SVG:", error)
     }
   }, [generatedImage, currentMode])
 
   const openImageInNewTab = useCallback(() => {
-    if (!generatedImage?.url) {
-      console.error("No image URL available")
+    if (!generatedImage?.url && !generatedImage?.svgCode) {
+      console.error("No content available")
       return
     }
 
     try {
-      if (generatedImage.url.startsWith("data:")) {
+      if (generatedImage.svgCode) {
+        const blob = new Blob([generatedImage.svgCode], { type: "image/svg+xml" })
+        const blobUrl = URL.createObjectURL(blob)
+        const newWindow = window.open(blobUrl, "_blank", "noopener,noreferrer")
+        if (newWindow) {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+        }
+      } else if (generatedImage.url?.startsWith("data:")) {
         const parts = generatedImage.url.split(",")
         const mime = parts[0].match(/:(.*?);/)?.[1] || "image/png"
         const bstr = atob(parts[1])
@@ -199,18 +217,25 @@ export function ImageCombiner() {
         if (newWindow) {
           setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
         }
-      } else {
+      } else if (generatedImage.url) {
         window.open(generatedImage.url, "_blank", "noopener,noreferrer")
       }
     } catch (error) {
-      console.error("Error opening image:", error)
-      window.open(generatedImage.url, "_blank")
+      console.error("Error opening SVG:", error)
     }
   }, [generatedImage])
 
   const copyImageToClipboard = useCallback(async () => {
     if (!generatedImage) return
     try {
+      // If we have SVG code, copy it as text to clipboard
+      if (generatedImage.svgCode) {
+        await navigator.clipboard.writeText(generatedImage.svgCode)
+        setToast({ message: "SVG code copied to clipboard!", type: "success" })
+        setTimeout(() => setToast(null), 2000)
+        return
+      }
+
       const convertToPngBlob = async (imageUrl: string): Promise<Blob> => {
         return new Promise((resolve, reject) => {
           const img = new Image()

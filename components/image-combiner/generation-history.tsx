@@ -169,21 +169,30 @@ export function GenerationHistory({
                         )}
                       </button>
                     )}
-                    <Image
-                      src={gen.imageUrl || "/placeholder.svg"}
-                      alt={gen.prompt || "Generated image"}
-                      fill
-                      sizes="(max-width: 768px) 80px, 96px"
-                      className={cn(
-                        "object-cover transition-opacity duration-300",
-                        loadedImages.has(gen.id) ? "opacity-100" : "opacity-0",
-                      )}
-                      onLoad={() => {
-                        setLoadedImages((prev) => new Set(prev).add(gen.id))
-                      }}
-                      unoptimized={gen.imageUrl?.includes("blob:") ?? false}
-                    />
-                    {!loadedImages.has(gen.id) && <div className="absolute inset-0 bg-gray-800 animate-pulse" />}
+                    {gen.svgCode ? (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center bg-white p-1 [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-full [&>svg]:h-full"
+                        dangerouslySetInnerHTML={{ __html: gen.svgCode }}
+                      />
+                    ) : (
+                      <>
+                        <Image
+                          src={gen.imageUrl || "/placeholder.svg"}
+                          alt={gen.prompt || "Generated image"}
+                          fill
+                          sizes="(max-width: 768px) 80px, 96px"
+                          className={cn(
+                            "object-cover transition-opacity duration-300",
+                            loadedImages.has(gen.id) ? "opacity-100" : "opacity-0",
+                          )}
+                          onLoad={() => {
+                            setLoadedImages((prev) => new Set(prev).add(gen.id))
+                          }}
+                          unoptimized={gen.imageUrl?.includes("blob:") ?? false}
+                        />
+                        {!loadedImages.has(gen.id) && <div className="absolute inset-0 bg-gray-800 animate-pulse" />}
+                      </>
+                    )}
                   </>
                 )}
               </div>

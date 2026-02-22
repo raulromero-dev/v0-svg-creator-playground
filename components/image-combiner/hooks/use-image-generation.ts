@@ -206,12 +206,20 @@ export function useImageGeneration({
 
           clearInterval(progressInterval)
 
-          if (data.url) {
+          if (data.svgCode || data.url) {
+            // If we have SVG code, create a data URL from it for thumbnail/preview compatibility
+            let imageUrl = data.url || null
+            if (data.svgCode && !imageUrl) {
+              const svgBlob = new Blob([data.svgCode], { type: "image/svg+xml" })
+              imageUrl = URL.createObjectURL(svgBlob)
+            }
+
             const completedGeneration: Generation = {
               id: generationId,
               status: "complete",
               progress: 100,
-              imageUrl: data.url,
+              imageUrl: imageUrl,
+              svgCode: data.svgCode || null,
               prompt: effectivePrompt,
               timestamp: Date.now(),
               createdAt: new Date().toISOString(),

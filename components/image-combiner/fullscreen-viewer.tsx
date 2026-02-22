@@ -1,6 +1,6 @@
 "use client"
 
-import type { Generation } from "./hooks/use-image-generation"
+import type { Generation } from "./types"
 
 interface FullscreenViewerProps {
   imageUrl: string
@@ -62,12 +62,20 @@ export function FullscreenViewer({ imageUrl, generations, onClose, onNavigate }:
             </button>
           </>
         )}
-        <img
-          src={imageUrl || "/placeholder.svg"}
-          alt="Fullscreen"
-          className="max-w-full max-h-[90vh] object-contain mx-auto shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        />
+        {imageUrl.trim().startsWith("<svg") ? (
+          <div
+            className="max-w-full max-h-[90vh] mx-auto shadow-2xl bg-white rounded-lg p-4 [&>svg]:max-w-full [&>svg]:max-h-[85vh] [&>svg]:w-auto [&>svg]:h-auto"
+            onClick={(e) => e.stopPropagation()}
+            dangerouslySetInnerHTML={{ __html: imageUrl }}
+          />
+        ) : (
+          <img
+            src={imageUrl || "/placeholder.svg"}
+            alt="Fullscreen"
+            className="max-w-full max-h-[90vh] object-contain mx-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
       </div>
     </div>
   )
