@@ -28,23 +28,23 @@ export function ProgressBar({ progress, onCancel, isConverting = false }: Progre
           />
 
           <div
-            className="absolute top-0 left-0 h-full transition-all duration-100 ease-out"
+            className="absolute top-0 left-0 h-full transition-all duration-300 ease-out"
             style={{
               width: `${progress}%`,
               backgroundImage: `
                 repeating-linear-gradient(
                   90deg,
-                  #005B5B 0px,
-                  #005B5B 6px,
-                  #007070 6px,
-                  #007070 8px
+                  #FFFFFF 0px,
+                  #FFFFFF 6px,
+                  #E0E0E0 6px,
+                  #E0E0E0 8px
                 ),
                 repeating-linear-gradient(
                   0deg,
-                  #005B5B 0px,
-                  #005B5B 6px,
-                  #007070 6px,
-                  #007070 8px
+                  #FFFFFF 0px,
+                  #FFFFFF 6px,
+                  #E0E0E0 6px,
+                  #E0E0E0 8px
                 )
               `,
               backgroundSize: "8px 8px",
@@ -52,7 +52,7 @@ export function ProgressBar({ progress, onCancel, isConverting = false }: Progre
           />
 
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs md:text-sm font-mono text-white/80" style={{ zIndex: 40 }}>
+            <span className="text-xs md:text-sm font-mono text-black/70 mix-blend-difference" style={{ zIndex: 40 }}>
               {Math.round(progress)}%
             </span>
           </div>
@@ -60,7 +60,7 @@ export function ProgressBar({ progress, onCancel, isConverting = false }: Progre
 
         <div className="text-center space-y-2">
           <p className="text-xs md:text-sm font-medium text-white animate-pulse">
-            {isConverting ? "Converting HEIC image..." : "Running..."}
+            {isConverting ? "Converting HEIC image..." : "Generating SVG..."}
           </p>
           {!isConverting && (
             <Button

@@ -77,6 +77,13 @@ export async function POST(request: NextRequest) {
     if (mode === "text-to-image") {
       const svgPrompt = `Generate an SVG graphic based on this description: ${prompt}`
 
+      console.log("[v0] === TEXT-TO-SVG REQUEST ===")
+      console.log("[v0] Mode:", mode)
+      console.log("[v0] User prompt:", prompt)
+      console.log("[v0] Full prompt sent to model:", svgPrompt)
+      console.log("[v0] Model:", "google/gemini-3.1-pro-preview")
+      console.log("[v0] System prompt length:", SVG_SYSTEM_PROMPT.length, "chars")
+
       const result = streamText({
         model,
         system: SVG_SYSTEM_PROMPT,
@@ -90,16 +97,30 @@ export async function POST(request: NextRequest) {
 
       // Collect the full streamed text
       let fullText = ""
+      let chunkCount = 0
       for await (const chunk of result.textStream) {
         fullText += chunk
+        chunkCount++
       }
+
+      console.log("[v0] === TEXT-TO-SVG RESPONSE ===")
+      console.log("[v0] Total chunks received:", chunkCount)
+      console.log("[v0] Raw response length:", fullText.length, "chars")
+      console.log("[v0] Raw response (first 500 chars):", fullText.substring(0, 500))
 
       // Extract SVG from response
       const svgCode = extractSvg(fullText)
 
+      console.log("[v0] SVG extracted:", svgCode ? `Yes (${svgCode.length} chars)` : "No")
+      if (svgCode) {
+        console.log("[v0] SVG preview (first 300 chars):", svgCode.substring(0, 300))
+      } else {
+        console.log("[v0] Full raw response for debugging:", fullText)
+      }
+
       if (!svgCode) {
         return NextResponse.json<ErrorResponse>(
-          { error: "No SVG generated", details: "The model did not return valid SVG code" },
+          { error: "No SVG generated", details: "The model did not return valid SVG code. Raw response: " + fullText.substring(0, 200) },
           { status: 500 },
         )
       }
@@ -187,6 +208,14 @@ export async function POST(request: NextRequest) {
 
       messageParts.push({ type: "text", text: editingPrompt })
 
+      console.log("[v0] === IMAGE-TO-SVG REQUEST ===")
+      console.log("[v0] Mode:", mode)
+      console.log("[v0] User prompt:", prompt)
+      console.log("[v0] Editing prompt sent:", editingPrompt)
+      console.log("[v0] Has image1:", !!hasImage1, "Has image2:", !!hasImage2)
+      console.log("[v0] Message parts count:", messageParts.length)
+      console.log("[v0] Model:", "google/gemini-3.1-pro-preview")
+
       const result = streamText({
         model,
         system: SVG_SYSTEM_PROMPT,
@@ -206,16 +235,28 @@ export async function POST(request: NextRequest) {
 
       // Collect the full streamed text
       let fullText = ""
+      let chunkCount = 0
       for await (const chunk of result.textStream) {
         fullText += chunk
+        chunkCount++
       }
+
+      console.log("[v0] === IMAGE-TO-SVG RESPONSE ===")
+      console.log("[v0] Total chunks received:", chunkCount)
+      console.log("[v0] Raw response length:", fullText.length, "chars")
+      console.log("[v0] Raw response (first 500 chars):", fullText.substring(0, 500))
 
       // Extract SVG from response
       const svgCode = extractSvg(fullText)
 
+      console.log("[v0] SVG extracted:", svgCode ? `Yes (${svgCode.length} chars)` : "No")
+      if (!svgCode) {
+        console.log("[v0] Full raw response for debugging:", fullText)
+      }
+
       if (!svgCode) {
         return NextResponse.json<ErrorResponse>(
-          { error: "No SVG generated", details: "The model did not return valid SVG code" },
+          { error: "No SVG generated", details: "The model did not return valid SVG code. Raw response: " + fullText.substring(0, 200) },
           { status: 500 },
         )
       }

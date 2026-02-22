@@ -139,26 +139,27 @@ export function useImageGeneration({
         setGenerations((prev) =>
           prev.map((gen) => {
             if (gen.id === generationId && gen.status === "loading") {
+              // Slow, smooth progress that takes ~60-90s to reach 95%
               const next =
-                gen.progress >= 98
-                  ? 98
-                  : gen.progress >= 96
-                    ? gen.progress + 0.2
-                    : gen.progress >= 90
-                      ? gen.progress + 0.5
-                      : gen.progress >= 75
-                        ? gen.progress + 0.8
-                        : gen.progress >= 50
-                          ? gen.progress + 1
-                          : gen.progress >= 25
-                            ? gen.progress + 1.2
-                            : gen.progress + 1.5
-              return { ...gen, progress: Math.min(next, 98) }
+                gen.progress >= 95
+                  ? 95
+                  : gen.progress >= 90
+                    ? gen.progress + 0.05
+                    : gen.progress >= 80
+                      ? gen.progress + 0.1
+                      : gen.progress >= 60
+                        ? gen.progress + 0.15
+                        : gen.progress >= 40
+                          ? gen.progress + 0.2
+                          : gen.progress >= 20
+                            ? gen.progress + 0.25
+                            : gen.progress + 0.3
+              return { ...gen, progress: Math.min(next, 95) }
             }
             return gen
           }),
         )
-      }, 100)
+      }, 300)
 
       const generationPromise = (async () => {
         try {
@@ -183,11 +184,20 @@ export function useImageGeneration({
             }
           }
 
+          console.log("[v0] === CLIENT: Sending generation request ===")
+          console.log("[v0] Mode:", currentMode)
+          console.log("[v0] Prompt:", effectivePrompt)
+          console.log("[v0] Aspect ratio:", effectiveAspectRatio)
+          console.log("[v0] Has image1:", effectiveUseUrls ? !!effectiveImage1Url : !!effectiveImage1)
+          console.log("[v0] Has image2:", effectiveUseUrls ? !!effectiveImage2Url : !!effectiveImage2)
+
           const response = await fetch("/api/generate-image", {
             method: "POST",
             body: formData,
             signal: controller.signal,
           })
+
+          console.log("[v0] Response status:", response.status, response.statusText)
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
@@ -203,6 +213,14 @@ export function useImageGeneration({
           }
 
           const data = await response.json()
+
+          console.log("[v0] === CLIENT: Response received ===")
+          console.log("[v0] Has svgCode:", !!data.svgCode, data.svgCode ? `(${data.svgCode.length} chars)` : "")
+          console.log("[v0] Has url:", !!data.url)
+          console.log("[v0] Has error:", !!data.error, data.error || "")
+          if (data.svgCode) {
+            console.log("[v0] SVG preview (first 200 chars):", data.svgCode.substring(0, 200))
+          }
 
           clearInterval(progressInterval)
 
