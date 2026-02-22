@@ -4,51 +4,50 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light grey theme for SVG creator */
-  --background: #F5F5F5;
-  --foreground: #1F1F1F;
-  --card: #FFFFFF;
-  --card-foreground: #1F1F1F;
-  --popover: #FFFFFF;
-  --popover-foreground: #1F1F1F;
-  --primary: #1F1F1F;
-  --primary-foreground: #FFFFFF;
-  --secondary: #E8E8E8;
-  --secondary-foreground: #1F1F1F;
-  --muted: #F0F0F0;
-  --muted-foreground: #737373;
-  --accent: #DADADA;
-  --accent-foreground: #1F1F1F;
+  /* Dark mode theme for SVG creator */
+  --background: #0A0A0A;
+  --foreground: #E5E5E5;
+  --card: #111111;
+  --card-foreground: #E5E5E5;
+  --popover: #141414;
+  --popover-foreground: #E5E5E5;
+  --primary: #FFFFFF;
+  --primary-foreground: #0A0A0A;
+  --secondary: #1C1C1C;
+  --secondary-foreground: #E5E5E5;
+  --muted: #171717;
+  --muted-foreground: #8B8B8B;
+  --accent: #222222;
+  --accent-foreground: #E5E5E5;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
-  --border: #D4D4D4;
-  --input: #FFFFFF;
-  --ring: #1F1F1F;
+  --border: #2A2A2A;
+  --input: #141414;
+  --ring: #FFFFFF;
   --radius: 0.5rem;
   --font-sans: "Google Sans", sans-serif;
 }
 
 .dark {
-  /* Dark mode not used, same as light */
-  --background: #F5F5F5;
-  --foreground: #1F1F1F;
-  --card: #FFFFFF;
-  --card-foreground: #1F1F1F;
-  --popover: #FFFFFF;
-  --popover-foreground: #1F1F1F;
-  --primary: #1F1F1F;
-  --primary-foreground: #FFFFFF;
-  --secondary: #E8E8E8;
-  --secondary-foreground: #1F1F1F;
-  --muted: #F0F0F0;
-  --muted-foreground: #737373;
-  --accent: #DADADA;
-  --accent-foreground: #1F1F1F;
+  --background: #0A0A0A;
+  --foreground: #E5E5E5;
+  --card: #111111;
+  --card-foreground: #E5E5E5;
+  --popover: #141414;
+  --popover-foreground: #E5E5E5;
+  --primary: #FFFFFF;
+  --primary-foreground: #0A0A0A;
+  --secondary: #1C1C1C;
+  --secondary-foreground: #E5E5E5;
+  --muted: #171717;
+  --muted-foreground: #8B8B8B;
+  --accent: #222222;
+  --accent-foreground: #E5E5E5;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
-  --border: #D4D4D4;
-  --input: #FFFFFF;
-  --ring: #1F1F1F;
+  --border: #2A2A2A;
+  --input: #141414;
+  --ring: #FFFFFF;
   --font-sans: "Google Sans", sans-serif;
 }
 
@@ -86,14 +85,14 @@
     @apply border-border outline-ring/50;
   }
   
-  /* Force light grey background on html and body */
+  /* Force dark background on html and body */
   html {
-    background-color: #F5F5F5 !important;
+    background-color: #0A0A0A !important;
   }
   
   body {
     @apply bg-background text-foreground;
-    background-color: #F5F5F5 !important;
+    background-color: #0A0A0A !important;
     font-family: "Google Sans", sans-serif !important;
   }
   

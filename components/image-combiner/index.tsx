@@ -645,17 +645,17 @@ export function ImageCombiner() {
         <GlobalDropZone dropZoneHover={dropZoneHover} onSetDropZoneHover={setDropZoneHover} onDrop={handleGlobalDrop} />
       )}
 
-      <div className="fixed inset-0 z-0 select-none shader-background bg-[#F5F5F5]">
+      <div className="fixed inset-0 z-0 select-none shader-background bg-[#0A0A0A]">
         <MemoizedDithering
-          colorBack="#F5F5F5"
-          colorFront="#D4D4D4"
+          colorBack="#0A0A0A"
+          colorFront="#1A1A1A"
           speed={0.3}
           shape="square"
           type="2x2"
           pxSize={2}
           scale={1.5}
           style={{
-            backgroundColor: "#F5F5F5",
+            backgroundColor: "#0A0A0A",
             height: "100vh",
             width: "100vw",
           }}
@@ -665,7 +665,7 @@ export function ImageCombiner() {
       <div className="relative z-10 w-full h-full flex items-center justify-center p-2 md:p-4">
         <div className="w-full max-w-[98vw] lg:max-w-[96vw] 2xl:max-w-[94vw]">
           <div className="w-full mx-auto select-none">
-            <div className="bg-white/95 border border-gray-300 shadow-lg flex flex-col rounded-lg overflow-hidden">
+            <div className="bg-[#111111]/95 border border-[#2A2A2A] shadow-lg flex flex-col rounded-lg overflow-hidden">
               <div className="bg-black px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex items-start justify-between gap-4 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   {!logoLoaded && <Skeleton className="w-6 h-6 md:w-7 md:h-7 rounded bg-white/20" />}
@@ -697,7 +697,7 @@ export function ImageCombiner() {
                   </div>
                 </div>
               </div>
-              <div className="px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col">
+              <div className="px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col bg-[#111111]">
 
                 {apiKeyMissing && <ApiKeyWarning />}
 
@@ -707,7 +707,7 @@ export function ImageCombiner() {
                   className="flex flex-col xl:flex-row gap-4 xl:gap-0 xl:min-h-[60vh] 2xl:min-h-[62vh]"
                 >
                   <div
-                    className="flex flex-col xl:pl-4 xl:pr-4 xl:border-r xl:border-gray-300 xl:pt-5 flex-shrink-0 xl:overflow-y-auto xl:max-h-[85vh] 2xl:max-h-[80vh]"
+                    className="flex flex-col xl:pl-4 xl:pr-4 xl:border-r xl:border-[#2A2A2A] xl:pt-5 flex-shrink-0 xl:overflow-y-auto xl:max-h-[85vh] 2xl:max-h-[80vh]"
                     style={{
                       width: isMobile ? "100%" : `${leftWidth}%`,
                     }}
@@ -765,12 +765,12 @@ export function ImageCombiner() {
                   </div>
 
                   <div
-                    className="hidden xl:flex items-center justify-center cursor-col-resize hover:bg-gray-200 transition-colors relative group"
+                    className="hidden xl:flex items-center justify-center cursor-col-resize hover:bg-white/5 transition-colors relative group"
                     style={{ width: "8px", flexShrink: 0 }}
                     onMouseDown={handleMouseDown}
                     onDoubleClick={handleDoubleClick}
                   >
-                    <div className="w-0.5 h-8 bg-gray-400 group-hover:bg-gray-600 transition-colors rounded-full" />
+                    <div className="w-0.5 h-8 bg-white/20 group-hover:bg-white/40 transition-colors rounded-full" />
                   </div>
 
                   <div
@@ -815,25 +815,25 @@ export function ImageCombiner() {
                 </div>
               </div>
 
-                <div className="mt-4 border-t border-gray-300 pt-5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-gray-500 flex-shrink-0">
+                <div className="mt-4 border-t border-[#2A2A2A] pt-5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-white/40 flex-shrink-0">
                   <a
                     href="https://v0.dev/chat/template-link-here"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-gray-800 transition-colors flex items-center gap-1"
+                    className="hover:text-white/70 transition-colors flex items-center gap-1"
                   >
                     Make this app your own
                   </a>
-                  <span className="text-gray-400 hidden sm:inline">•</span>
-                  <button onClick={() => setShowHowItWorks(true)} className="hover:text-gray-800 transition-colors">
+                  <span className="text-white/20 hidden sm:inline">•</span>
+                  <button onClick={() => setShowHowItWorks(true)} className="hover:text-white/70 transition-colors">
                     How it works
                   </button>
-                  <span className="text-gray-400 hidden sm:inline">•</span>
+                  <span className="text-white/20 hidden sm:inline">•</span>
                   <a
                     href="https://x.com/estebansuarez"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-gray-800 transition-colors flex items-center gap-1"
+                    className="hover:text-white/70 transition-colors flex items-center gap-1"
                   >
                     Feedback?
                   </a>

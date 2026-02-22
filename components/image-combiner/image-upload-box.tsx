@@ -16,8 +16,8 @@ export function ImageUploadBox({ imageNumber, preview, onDrop, onClear, onSelect
   return (
     <div
       className={cn(
-        "w-full h-[60px] sm:h-[80px] md:h-[100px] lg:h-[12vh] xl:h-[14vh] border border-gray-600 flex items-center justify-center cursor-pointer hover:border-white transition-all bg-black/30 relative group",
-        preview && "border-white",
+        "w-full h-[60px] sm:h-[80px] md:h-[100px] lg:h-[12vh] xl:h-[14vh] border border-[#333] flex items-center justify-center cursor-pointer hover:border-white/60 transition-all bg-black/30 relative group",
+        preview && "border-white/60",
       )}
       onDrop={onDrop}
       onDragOver={(e) => e.preventDefault()}
@@ -61,7 +61,7 @@ export function ImageUploadBox({ imageNumber, preview, onDrop, onClear, onSelect
           />
         </div>
       ) : (
-        <div className="text-center text-gray-300 py-1 sm:py-4">
+        <div className="text-center text-gray-400 py-1 sm:py-4">
           <svg
             className="w-3 h-3 sm:w-5 sm:h-5 md:w-6 md:h-6 mx-auto mb-1"
             fill="none"

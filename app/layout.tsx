@@ -69,7 +69,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport = {
-  themeColor: "#F5F5F5",
+  themeColor: "#0A0A0A",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -84,14 +84,14 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      style={{ backgroundColor: "#F5F5F5" }}
+      style={{ backgroundColor: "#0A0A0A" }}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-sans antialiased" style={{ backgroundColor: "#F5F5F5", fontFamily: "'Google Sans', sans-serif" }}>
+      <body className="font-sans antialiased" style={{ backgroundColor: "#0A0A0A", fontFamily: "'Google Sans', sans-serif" }}>
         <ErrorBoundary>
           <Suspense fallback={null}>{children}</Suspense>
         </ErrorBoundary>
