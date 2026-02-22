@@ -151,7 +151,7 @@ export function OutputSection({
               {generatedImage.svgCode ? (
                 <div
                   className={cn(
-                    "max-w-full max-h-full w-full h-full flex items-center justify-center transition-all duration-700 ease-out cursor-pointer [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:h-auto",
+                    "max-w-full max-h-full w-full h-full flex items-center justify-center transition-all duration-700 ease-out cursor-pointer bg-white rounded [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:h-auto",
                     "opacity-100 scale-100",
                   )}
                   onClick={onOpenFullscreen}
