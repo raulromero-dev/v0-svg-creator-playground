@@ -149,13 +149,15 @@ export function OutputSection({
           <div className="absolute inset-0 flex flex-col select-none">
             <div className="flex-1 flex items-center justify-center relative group max-w-full max-h-full overflow-hidden">
               {generatedImage.svgCode ? (
-                <div
+                <iframe
+                  srcDoc={`<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}svg{max-width:100%;max-height:100%;width:auto;height:auto}</style></head><body>${generatedImage.svgCode}</body></html>`}
+                  title="Generated SVG"
+                  sandbox="allow-same-origin"
                   className={cn(
-                    "max-w-full max-h-full w-full h-full flex items-center justify-center transition-all duration-700 ease-out cursor-pointer bg-white rounded [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:h-auto",
+                    "w-full h-full border-0 bg-white rounded transition-all duration-700 ease-out cursor-pointer",
                     "opacity-100 scale-100",
                   )}
                   onClick={onOpenFullscreen}
-                  dangerouslySetInnerHTML={{ __html: generatedImage.svgCode }}
                 />
               ) : (
                 <img

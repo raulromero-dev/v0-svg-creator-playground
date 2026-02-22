@@ -170,9 +170,11 @@ export function GenerationHistory({
                       </button>
                     )}
                     {gen.svgCode ? (
-                      <div
-                        className="absolute inset-0 flex items-center justify-center bg-white p-1 [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-full [&>svg]:h-full"
-                        dangerouslySetInnerHTML={{ __html: gen.svgCode }}
+                      <iframe
+                        srcDoc={`<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}svg{max-width:100%;max-height:100%;width:100%;height:100%}</style></head><body>${gen.svgCode}</body></html>`}
+                        title={gen.prompt || "Generated SVG"}
+                        sandbox="allow-same-origin"
+                        className="absolute inset-0 w-full h-full border-0 pointer-events-none"
                       />
                     ) : (
                       <>
