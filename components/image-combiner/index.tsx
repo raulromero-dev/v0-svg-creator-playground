@@ -666,24 +666,24 @@ export function ImageCombiner() {
         <div className="w-full max-w-[98vw] lg:max-w-[96vw] 2xl:max-w-[94vw]">
           <div className="w-full mx-auto select-none">
             <div className="bg-[#111111]/95 border border-[#2A2A2A] shadow-lg flex flex-col rounded-lg overflow-hidden">
-              <div className="bg-black px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex items-start justify-between gap-4 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  {!logoLoaded && <Skeleton className="w-6 h-6 md:w-7 md:h-7 rounded bg-white/20" />}
-                  <img
-                    src="/v0-logo.svg"
-                    alt="v0 logo"
-                    width="28"
-                    height="28"
-                    className={`w-6 h-6 md:w-7 md:h-7 ${logoLoaded ? "block" : "hidden"}`}
-                    onLoad={() => setLogoLoaded(true)}
-                  />
-                  <div>
+              <div className="bg-black px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-5 flex items-center justify-between gap-4 flex-shrink-0">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="flex-shrink-0 overflow-hidden rounded-[6px] md:rounded-[8px]">
+                    {!logoLoaded && <Skeleton className="w-9 h-9 md:w-11 md:h-11 bg-white/20" />}
+                    <img
+                      src="/v0-logo.svg"
+                      alt="v0 logo"
+                      width="44"
+                      height="44"
+                      className={`w-9 h-9 md:w-11 md:h-11 ${logoLoaded ? "block" : "hidden"}`}
+                      onLoad={() => setLogoLoaded(true)}
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center">
                     <h1 className="text-lg md:text-2xl font-bold text-white select-none leading-none">
-                      <div className="md:hidden">SVG</div>
-                      <div className="md:hidden mt-0.5">Creator</div>
-                      <div className="hidden md:block">SVG Creator</div>
+                      SVG Creator
                     </h1>
-                    <p className="text-[9px] md:text-[10px] text-gray-400 select-none tracking-wide mt-0.5 md:mt-1">
+                    <p className="text-[9px] md:text-[11px] text-gray-400 select-none tracking-wide mt-0.5 md:mt-1">
                       Powered by{" "}
                       <a
                         href="https://ai.google.dev/gemini-api"
