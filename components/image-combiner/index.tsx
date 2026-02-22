@@ -671,7 +671,7 @@ export function ImageCombiner() {
                   <div className="flex-shrink-0 overflow-hidden rounded-[6px] md:rounded-[8px]">
                     {!logoLoaded && <Skeleton className="w-9 h-9 md:w-11 md:h-11 bg-white/20" />}
                     <img
-                      src="/v0-logo.svg"
+                      src="/v0-logo.jpg"
                       alt="v0 logo"
                       width="44"
                       height="44"
