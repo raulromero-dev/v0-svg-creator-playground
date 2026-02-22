@@ -665,40 +665,43 @@ export function ImageCombiner() {
       <div className="relative z-10 w-full h-full flex items-center justify-center p-2 md:p-4">
         <div className="w-full max-w-[98vw] lg:max-w-[96vw] 2xl:max-w-[94vw]">
           <div className="w-full mx-auto select-none">
-            <div className="bg-white/95 border border-gray-300 shadow-lg px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col rounded-lg">
-              <div className="flex items-start justify-between gap-4 mb-2 md:mb-3 flex-shrink-0">
-                <div>
-                  {!logoLoaded && <Skeleton className="w-6 h-6 md:w-7 md:h-7 mb-0.5 md:mb-1 rounded" />}
+            <div className="bg-white/95 border border-gray-300 shadow-lg flex flex-col rounded-lg overflow-hidden">
+              <div className="bg-black px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex items-start justify-between gap-4 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  {!logoLoaded && <Skeleton className="w-6 h-6 md:w-7 md:h-7 rounded bg-white/20" />}
                   <img
                     src="/v0-logo.svg"
                     alt="v0 logo"
                     width="28"
                     height="28"
-                    className={`w-6 h-6 md:w-7 md:h-7 mb-0.5 md:mt-1 ${logoLoaded ? "block" : "hidden"}`}
+                    className={`w-6 h-6 md:w-7 md:h-7 ${logoLoaded ? "block" : "hidden"}`}
                     onLoad={() => setLogoLoaded(true)}
                   />
-                  <h1 className="text-lg md:text-2xl font-bold text-gray-900 select-none leading-none">
-                    <div className="md:hidden">SVG</div>
-                    <div className="md:hidden mt-0.5">Creator</div>
-                    <div className="hidden md:block">SVG Creator</div>
-                  </h1>
-                  <p className="text-[9px] md:text-[10px] text-gray-600 select-none tracking-wide mt-0.5 md:mt-1">
-                    Powered by{" "}
-                    <a
-                      href="https://ai.google.dev/gemini-api"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-gray-800 transition-colors font-medium"
-                    >
-                      Gemini 3.1
-                    </a>
-                  </p>
+                  <div>
+                    <h1 className="text-lg md:text-2xl font-bold text-white select-none leading-none">
+                      <div className="md:hidden">SVG</div>
+                      <div className="md:hidden mt-0.5">Creator</div>
+                      <div className="hidden md:block">SVG Creator</div>
+                    </h1>
+                    <p className="text-[9px] md:text-[10px] text-gray-400 select-none tracking-wide mt-0.5 md:mt-1">
+                      Powered by{" "}
+                      <a
+                        href="https://ai.google.dev/gemini-api"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-gray-300 transition-colors font-medium"
+                      >
+                        Gemini 3.1
+                      </a>
+                    </p>
+                  </div>
                 </div>
               </div>
+              <div className="px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col">
 
-              {apiKeyMissing && <ApiKeyWarning />}
+                {apiKeyMissing && <ApiKeyWarning />}
 
-              <div className="flex flex-col gap-4 xl:gap-0">
+                <div className="flex flex-col gap-4 xl:gap-0">
                 <div
                   ref={containerRef}
                   className="flex flex-col xl:flex-row gap-4 xl:gap-0 xl:min-h-[60vh] 2xl:min-h-[62vh]"
@@ -812,28 +815,29 @@ export function ImageCombiner() {
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-gray-300 pt-5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-gray-500 flex-shrink-0">
-                <a
-                  href="https://v0.dev/chat/template-link-here"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-gray-800 transition-colors flex items-center gap-1"
-                >
-                  Make this app your own
-                </a>
-                <span className="text-gray-400 hidden sm:inline">•</span>
-                <button onClick={() => setShowHowItWorks(true)} className="hover:text-gray-800 transition-colors">
-                  How it works
-                </button>
-                <span className="text-gray-400 hidden sm:inline">•</span>
-                <a
-                  href="https://x.com/estebansuarez"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-gray-800 transition-colors flex items-center gap-1"
-                >
-                  Feedback?
-                </a>
+                <div className="mt-4 border-t border-gray-300 pt-5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-gray-500 flex-shrink-0">
+                  <a
+                    href="https://v0.dev/chat/template-link-here"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-gray-800 transition-colors flex items-center gap-1"
+                  >
+                    Make this app your own
+                  </a>
+                  <span className="text-gray-400 hidden sm:inline">•</span>
+                  <button onClick={() => setShowHowItWorks(true)} className="hover:text-gray-800 transition-colors">
+                    How it works
+                  </button>
+                  <span className="text-gray-400 hidden sm:inline">•</span>
+                  <a
+                    href="https://x.com/estebansuarez"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-gray-800 transition-colors flex items-center gap-1"
+                  >
+                    Feedback?
+                  </a>
+                </div>
               </div>
             </div>
           </div>
