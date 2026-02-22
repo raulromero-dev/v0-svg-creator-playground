@@ -647,7 +647,7 @@ export function ImageCombiner() {
 
       <div className="fixed inset-0 z-0 select-none shader-background bg-[#0A0A0A]">
         <MemoizedDithering
-          colorBack="#B0B0B0"
+          colorBack="#000000"
           colorFront="#FFFFFF"
           speed={0.3}
           shape="square"
