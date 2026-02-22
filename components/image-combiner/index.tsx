@@ -669,14 +669,13 @@ export function ImageCombiner() {
               <div className="bg-black px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-5 flex items-center justify-between gap-4 flex-shrink-0">
                 <div className="flex items-center gap-3 md:gap-4">
                   <div className="flex-shrink-0 overflow-hidden rounded-[6px] md:rounded-[8px]">
-                    {!logoLoaded && <Skeleton className="w-9 h-9 md:w-11 md:h-11 bg-white/20" />}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src="/v0-logo.jpg"
                       alt="v0 logo"
-                      width="44"
-                      height="44"
-                      className={`w-9 h-9 md:w-11 md:h-11 ${logoLoaded ? "block" : "hidden"}`}
-                      onLoad={() => setLogoLoaded(true)}
+                      width={44}
+                      height={44}
+                      className="w-9 h-9 md:w-11 md:h-11 object-cover"
                     />
                   </div>
                   <div className="flex flex-col justify-center">
