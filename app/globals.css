@@ -4,64 +4,56 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Changed to all black theme */
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #000000;
-  --card-foreground: #ffffff;
-  --popover: #000000;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #111111;
-  --secondary-foreground: #ffffff;
-  --muted: #0a0a0a;
-  --muted-foreground: #999999;
-  --accent: #1a1a1a;
-  --accent-foreground: #ffffff;
-  --destructive: #ffffff;
-  --destructive-foreground: #000000;
-  --border: #333333;
-  --input: #000000;
-  --ring: #ffffff;
-  /* Removed chart-* variables - chart component deleted */
-  --radius: 0rem;
-  /* Removed sidebar-* variables - sidebar component deleted */
-  --font-inter: "Inter", sans-serif;
-  --font-jetbrains-mono: "JetBrains Mono", monospace;
+  /* Light grey theme for SVG creator */
+  --background: #F5F5F5;
+  --foreground: #1F1F1F;
+  --card: #FFFFFF;
+  --card-foreground: #1F1F1F;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F1F1F;
+  --primary: #1F1F1F;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8E8E8;
+  --secondary-foreground: #1F1F1F;
+  --muted: #F0F0F0;
+  --muted-foreground: #737373;
+  --accent: #DADADA;
+  --accent-foreground: #1F1F1F;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #D4D4D4;
+  --input: #FFFFFF;
+  --ring: #1F1F1F;
+  --radius: 0.5rem;
+  --font-sans: "Google Sans", sans-serif;
 }
 
 .dark {
-  /* Dark mode now same as light mode since everything is black */
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #000000;
-  --card-foreground: #ffffff;
-  --popover: #000000;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #111111;
-  --secondary-foreground: #ffffff;
-  --muted: #0a0a0a;
-  --muted-foreground: #999999;
-  --accent: #1a1a1a;
-  --accent-foreground: #ffffff;
-  --destructive: #ffffff;
-  --destructive-foreground: #000000;
-  --border: #333333;
-  --input: #000000;
-  --ring: #ffffff;
-  /* Removed chart-* variables - chart component deleted */
-  /* Removed sidebar-* variables - sidebar component deleted */
-  --font-inter: "Inter", sans-serif;
-  --font-jetbrains-mono: "JetBrains Mono", monospace;
+  /* Dark mode not used, same as light */
+  --background: #F5F5F5;
+  --foreground: #1F1F1F;
+  --card: #FFFFFF;
+  --card-foreground: #1F1F1F;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F1F1F;
+  --primary: #1F1F1F;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8E8E8;
+  --secondary-foreground: #1F1F1F;
+  --muted: #F0F0F0;
+  --muted-foreground: #737373;
+  --accent: #DADADA;
+  --accent-foreground: #1F1F1F;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #D4D4D4;
+  --input: #FFFFFF;
+  --ring: #1F1F1F;
+  --font-sans: "Google Sans", sans-serif;
 }
 
 @theme inline {
-  /* Updated font variables to use new Inter and JetBrains Mono fonts */
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains-mono);
+  --font-sans: var(--font-sans);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -94,14 +86,15 @@
     @apply border-border outline-ring/50;
   }
   
-  /* Force black background on html and body to prevent flashes */
+  /* Force light grey background on html and body */
   html {
-    background-color: #000000 !important;
+    background-color: #F5F5F5 !important;
   }
   
   body {
     @apply bg-background text-foreground;
-    background-color: #000000 !important;
+    background-color: #F5F5F5 !important;
+    font-family: "Google Sans", sans-serif !important;
   }
   
   /* Optimize background shader rendering with containment and hardware acceleration */

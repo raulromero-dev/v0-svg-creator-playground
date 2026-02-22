@@ -2,9 +2,9 @@ import { ImageCombiner } from "@/components/image-combiner"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Nano Banana Pro - Free AI Image Generator & Editor",
+  title: "SVG Creator - AI-Powered Text & Image to SVG",
   description:
-    "Nano Banana Pro is your go-to AI image generation tool. Create stunning images from text, edit existing images with AI, and explore multiple aspect ratios. Powered by Google Gemini 2.5 Flash Image.",
+    "Create beautiful SVG files from text descriptions or images using Google Gemini 3.1. The easiest way to generate and edit scalable vector graphics with AI.",
 }
 
 export default function Home() {

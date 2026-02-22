@@ -1,23 +1,20 @@
 {
-  "name": "Nano Banana Pro",
-  "short_name": "NB Pro",
-  "description": "AI-powered image generation and editing tool",
+  "name": "SVG Creator",
+  "short_name": "SVG Creator",
+  "description": "AI-powered text and image to SVG converter",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#005B5B",
+  "background_color": "#F5F5F5",
+  "theme_color": "#F5F5F5",
+  "orientation": "portrait-primary",
   "icons": [
-    {
-      "src": "/icon-192.jpg",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
     {
       "src": "/icon-512.jpg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
+  ]
+}
   ]
 }

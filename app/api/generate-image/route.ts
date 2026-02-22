@@ -73,10 +73,10 @@ export async function POST(request: NextRequest) {
       apiKey: apiKey,
     })
 
-    const model = gateway("google/gemini-3-pro-image")
+    const model = gateway("google/gemini-3.1-flash")
 
     if (mode === "text-to-image") {
-      const imageGenerationPrompt = `Generate a high-quality image based on this description: ${prompt}. The image should be visually appealing and match the description as closely as possible.`
+      const imageGenerationPrompt = `Generate a clean, scalable SVG graphic based on this description: ${prompt}. The output should be a professional vector graphic with clean lines, suitable for use as an SVG file. Focus on simplicity, clarity, and vector-friendly design elements.`
 
       const result = await generateText({
         model,
@@ -181,8 +181,8 @@ export async function POST(request: NextRequest) {
       }
 
       const editingPrompt = hasImage2
-        ? `${prompt}. Combine these two images creatively while following the instructions.`
-        : `${prompt}. Edit or transform this image based on the instructions.`
+        ? `${prompt}. Convert and combine these two images into a clean SVG-style graphic with vector-friendly elements, following the instructions.`
+        : `${prompt}. Convert this image into a clean SVG-style graphic with simplified, vector-friendly elements based on the instructions.`
 
       messageParts.push({ type: "text", text: editingPrompt })
 

@@ -23,7 +23,7 @@ const MemoizedDithering = memo(Dithering)
 
 export function ImageCombiner() {
   const isMobile = useMobile()
-  const [prompt, setPrompt] = useState("A beautiful landscape with mountains and a lake at sunset")
+  const [prompt, setPrompt] = useState("A minimalist icon of a mountain with a sun, clean lines, suitable for logo design")
   const [useUrls, setUseUrls] = useState(false)
   const [showFullscreen, setShowFullscreen] = useState(false)
   const [fullscreenImageUrl, setFullscreenImageUrl] = useState("")
@@ -166,7 +166,7 @@ export function ImageCombiner() {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `nano-banana-pro-${currentMode}-result.png`
+      link.download = `svg-creator-${currentMode}-result.svg`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -645,17 +645,17 @@ export function ImageCombiner() {
         <GlobalDropZone dropZoneHover={dropZoneHover} onSetDropZoneHover={setDropZoneHover} onDrop={handleGlobalDrop} />
       )}
 
-      <div className="fixed inset-0 z-0 select-none shader-background bg-black">
+      <div className="fixed inset-0 z-0 select-none shader-background bg-[#F5F5F5]">
         <MemoizedDithering
-          colorBack="#00000000"
-          colorFront="#005B5B"
-          speed={0.43}
-          shape="wave"
-          type="4x4"
-          pxSize={3}
-          scale={1.13}
+          colorBack="#F5F5F5"
+          colorFront="#D4D4D4"
+          speed={0.3}
+          shape="square"
+          type="2x2"
+          pxSize={2}
+          scale={1.5}
           style={{
-            backgroundColor: "#000000",
+            backgroundColor: "#F5F5F5",
             height: "100vh",
             width: "100vw",
           }}
@@ -665,7 +665,7 @@ export function ImageCombiner() {
       <div className="relative z-10 w-full h-full flex items-center justify-center p-2 md:p-4">
         <div className="w-full max-w-[98vw] lg:max-w-[96vw] 2xl:max-w-[94vw]">
           <div className="w-full mx-auto select-none">
-            <div className="bg-black/70 border-0 px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col rounded-lg">
+            <div className="bg-white/95 border border-gray-300 shadow-lg px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col rounded-lg">
               <div className="flex items-start justify-between gap-4 mb-2 md:mb-3 flex-shrink-0">
                 <div>
                   {!logoLoaded && <Skeleton className="w-6 h-6 md:w-7 md:h-7 mb-0.5 md:mb-1 rounded" />}
@@ -677,20 +677,20 @@ export function ImageCombiner() {
                     className={`w-6 h-6 md:w-7 md:h-7 mb-0.5 md:mt-1 ${logoLoaded ? "block" : "hidden"}`}
                     onLoad={() => setLogoLoaded(true)}
                   />
-                  <h1 className="text-lg md:text-2xl font-bold text-white select-none leading-none">
-                    <div className="md:hidden">Nano</div>
-                    <div className="md:hidden mt-0.5">Banana Pro</div>
-                    <div className="hidden md:block">Nano Banana Pro</div>
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-900 select-none leading-none">
+                    <div className="md:hidden">SVG</div>
+                    <div className="md:hidden mt-0.5">Creator</div>
+                    <div className="hidden md:block">SVG Creator</div>
                   </h1>
-                  <p className="text-[9px] md:text-[10px] text-gray-400 select-none tracking-wide mt-0.5 md:mt-1">
-                    Playground by{" "}
+                  <p className="text-[9px] md:text-[10px] text-gray-600 select-none tracking-wide mt-0.5 md:mt-1">
+                    Powered by{" "}
                     <a
-                      href="https://vercel.com/ai-gateway"
+                      href="https://ai.google.dev/gemini-api"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:text-gray-300 transition-colors"
+                      className="hover:text-gray-800 transition-colors font-medium"
                     >
-                      Vercel AI Gateway
+                      Gemini 3.1
                     </a>
                   </p>
                 </div>
@@ -704,7 +704,7 @@ export function ImageCombiner() {
                   className="flex flex-col xl:flex-row gap-4 xl:gap-0 xl:min-h-[60vh] 2xl:min-h-[62vh]"
                 >
                   <div
-                    className="flex flex-col xl:pl-4 xl:pr-4 xl:border-r xl:border-white/10 xl:pt-5 flex-shrink-0 xl:overflow-y-auto xl:max-h-[85vh] 2xl:max-h-[80vh]"
+                    className="flex flex-col xl:pl-4 xl:pr-4 xl:border-r xl:border-gray-300 xl:pt-5 flex-shrink-0 xl:overflow-y-auto xl:max-h-[85vh] 2xl:max-h-[80vh]"
                     style={{
                       width: isMobile ? "100%" : `${leftWidth}%`,
                     }}
@@ -762,12 +762,12 @@ export function ImageCombiner() {
                   </div>
 
                   <div
-                    className="hidden xl:flex items-center justify-center cursor-col-resize hover:bg-white/10 transition-colors relative group"
+                    className="hidden xl:flex items-center justify-center cursor-col-resize hover:bg-gray-200 transition-colors relative group"
                     style={{ width: "8px", flexShrink: 0 }}
                     onMouseDown={handleMouseDown}
                     onDoubleClick={handleDoubleClick}
                   >
-                    <div className="w-0.5 h-8 bg-white/20 group-hover:bg-white/40 transition-colors rounded-full" />
+                    <div className="w-0.5 h-8 bg-gray-400 group-hover:bg-gray-600 transition-colors rounded-full" />
                   </div>
 
                   <div
@@ -812,25 +812,25 @@ export function ImageCombiner() {
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-white/10 pt-5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-white/60 flex-shrink-0">
+              <div className="mt-4 border-t border-gray-300 pt-5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-gray-500 flex-shrink-0">
                 <a
                   href="https://v0.dev/chat/template-link-here"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white/80 transition-colors flex items-center gap-1"
+                  className="hover:text-gray-800 transition-colors flex items-center gap-1"
                 >
                   Make this app your own
                 </a>
-                <span className="text-white/20 hidden sm:inline">•</span>
-                <button onClick={() => setShowHowItWorks(true)} className="hover:text-white/80 transition-colors">
+                <span className="text-gray-400 hidden sm:inline">•</span>
+                <button onClick={() => setShowHowItWorks(true)} className="hover:text-gray-800 transition-colors">
                   How it works
                 </button>
-                <span className="text-white/20 hidden sm:inline">•</span>
+                <span className="text-gray-400 hidden sm:inline">•</span>
                 <a
                   href="https://x.com/estebansuarez"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white/80 transition-colors flex items-center gap-1"
+                  className="hover:text-gray-800 transition-colors flex items-center gap-1"
                 >
                   Feedback?
                 </a>
