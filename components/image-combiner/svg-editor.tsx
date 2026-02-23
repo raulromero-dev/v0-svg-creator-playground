@@ -193,6 +193,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const [zoom, setZoom] = useState(100)
   const [isDragging, setIsDragging] = useState(false)
   const [editMode, setEditMode] = useState<"move" | "points">("move")
+  const [isPointDragging, setIsPointDragging] = useState(false)
   const dragStartRef = useRef<{ x: number; y: number; origTx: number; origTy: number } | null>(null)
   const pointDragRef = useRef<{
     type: "anchor" | "handle"
@@ -375,18 +376,30 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     }
   }, [isDragging, editMode, serializeSvg, onSvgChange])
 
-  // Point drag handlers
-  const handlePointMouseDown = useCallback((
-    e: React.MouseEvent,
-    type: "anchor" | "handle",
-    cmdIndex: number,
-    valueIndex: number,
-    isAbsolute: boolean,
-    pathElement: SVGPathElement,
-    commands: PathPoint[],
-  ) => {
+  // Store paths ref for point drag initiation
+  const pathsRef = useRef<SVGPathElement[]>([])
+
+  // Unified point mousedown handler on svgContainer
+  const handlePointOverlayMouseDown = useCallback((e: React.MouseEvent) => {
+    if (editMode !== "points") return
+
+    const target = e.target as SVGElement
+    const pointType = target.getAttribute("data-point-type") as "anchor" | "handle" | null
+    if (!pointType) return
+
     e.stopPropagation()
     e.preventDefault()
+
+    const cmdIndex = parseInt(target.getAttribute("data-cmd-index") || "0")
+    const valueIndex = parseInt(target.getAttribute("data-value-index") || "0")
+    const isAbsolute = target.getAttribute("data-is-absolute") === "true"
+    const pathId = parseInt(target.getAttribute("data-path-id") || "0")
+    const pathEl = pathsRef.current[pathId]
+    if (!pathEl) return
+
+    const d = pathEl.getAttribute("d")
+    if (!d) return
+    const commands = parsePath(d)
 
     const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
     if (!svgRoot) return
@@ -405,7 +418,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const isV = cmdType === "V"
 
     pointDragRef.current = {
-      type,
+      type: pointType,
       cmdIndex,
       valueIndex,
       isAbsolute,
@@ -413,16 +426,17 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       startSvgY: svgP.y,
       origValX: cmd.values[valueIndex],
       origValY: isH ? 0 : isV ? cmd.values[valueIndex] : cmd.values[valueIndex + 1],
-      pathElement,
+      pathElement: pathEl,
       commands: JSON.parse(JSON.stringify(commands)),
       isHCommand: isH,
       isVCommand: isV,
     }
-  }, [])
+    setIsPointDragging(true)
+  }, [editMode])
 
-  // Point drag move/up
+  // Point drag move/up -- driven by isPointDragging state
   useEffect(() => {
-    if (!pointDragRef.current) return
+    if (!isPointDragging) return
 
     const handleMouseMove = (e: MouseEvent) => {
       const ref = pointDragRef.current
@@ -459,10 +473,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     const handleMouseUp = () => {
       pointDragRef.current = null
+      setIsPointDragging(false)
       const newSvg = serializeSvg()
       if (newSvg) onSvgChange(newSvg)
-      // Force re-render of points overlay
-      setEditMode("points")
+      // Force re-render of points overlay by toggling editMode
+      setEditMode("move")
+      requestAnimationFrame(() => setEditMode("points"))
     }
 
     window.addEventListener("mousemove", handleMouseMove)
@@ -471,7 +487,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       window.removeEventListener("mousemove", handleMouseMove)
       window.removeEventListener("mouseup", handleMouseUp)
     }
-  }, [serializeSvg, onSvgChange])
+  }, [isPointDragging, serializeSvg, onSvgChange])
 
   // Draw selection and point overlays
   useEffect(() => {
@@ -493,6 +509,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       }
 
       const paths = getAllPaths(selectedElement)
+      pathsRef.current = paths
       for (const pathEl of paths) {
         const d = pathEl.getAttribute("d")
         if (!d) continue
@@ -546,39 +563,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           circle.style.cursor = "pointer"
           circle.style.pointerEvents = "all"
 
-          // Drag handler for control handles
-          circle.addEventListener("mousedown", ((handle: typeof h) => (ev: Event) => {
-            const me = ev as MouseEvent
-            me.stopPropagation()
-            me.preventDefault()
-
-            const svgRootEl = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
-            if (!svgRootEl) return
-            const pt2 = svgRootEl.createSVGPoint()
-            const ctm2 = svgRootEl.getScreenCTM()
-            if (!ctm2) return
-            pt2.x = me.clientX
-            pt2.y = me.clientY
-            const svgP2 = pt2.matrixTransform(ctm2.inverse())
-
-            const cmd = commands[handle.cmdIndex]
-            const cmdType = cmd.type.toUpperCase()
-
-            pointDragRef.current = {
-              type: "handle",
-              cmdIndex: handle.cmdIndex,
-              valueIndex: handle.valueIndex,
-              isAbsolute: handle.isAbsolute,
-              startSvgX: svgP2.x,
-              startSvgY: svgP2.y,
-              origValX: cmd.values[handle.valueIndex],
-              origValY: cmdType === "H" ? 0 : cmdType === "V" ? cmd.values[handle.valueIndex] : cmd.values[handle.valueIndex + 1],
-              pathElement: pathEl,
-              commands: JSON.parse(JSON.stringify(commands)),
-              isHCommand: cmdType === "H",
-              isVCommand: cmdType === "V",
-            }
-          })(h))
+          // Drag handler for control handles -- store data in attributes
+          circle.setAttribute("data-point-type", "handle")
+          circle.setAttribute("data-cmd-index", String(h.cmdIndex))
+          circle.setAttribute("data-value-index", String(h.valueIndex))
+          circle.setAttribute("data-is-absolute", String(h.isAbsolute))
+          circle.setAttribute("data-path-id", String(paths.indexOf(pathEl)))
 
           svgRoot.appendChild(circle)
         }
@@ -599,39 +589,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           rect.style.cursor = "pointer"
           rect.style.pointerEvents = "all"
 
-          // Drag handler for anchors
-          rect.addEventListener("mousedown", ((anchor: typeof a) => (ev: Event) => {
-            const me = ev as MouseEvent
-            me.stopPropagation()
-            me.preventDefault()
-
-            const svgRootEl = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
-            if (!svgRootEl) return
-            const pt2 = svgRootEl.createSVGPoint()
-            const ctm2 = svgRootEl.getScreenCTM()
-            if (!ctm2) return
-            pt2.x = me.clientX
-            pt2.y = me.clientY
-            const svgP2 = pt2.matrixTransform(ctm2.inverse())
-
-            const cmd = commands[anchor.cmdIndex]
-            const cmdType = cmd.type.toUpperCase()
-
-            pointDragRef.current = {
-              type: "anchor",
-              cmdIndex: anchor.cmdIndex,
-              valueIndex: anchor.valueIndex,
-              isAbsolute: anchor.isAbsolute,
-              startSvgX: svgP2.x,
-              startSvgY: svgP2.y,
-              origValX: cmd.values[anchor.valueIndex],
-              origValY: cmdType === "H" ? 0 : cmdType === "V" ? cmd.values[anchor.valueIndex] : cmd.values[anchor.valueIndex + 1],
-              pathElement: pathEl,
-              commands: JSON.parse(JSON.stringify(commands)),
-              isHCommand: cmdType === "H",
-              isVCommand: cmdType === "V",
-            }
-          })(a))
+          // Drag handler for anchors -- store data in attributes
+          rect.setAttribute("data-point-type", "anchor")
+          rect.setAttribute("data-cmd-index", String(a.cmdIndex))
+          rect.setAttribute("data-value-index", String(a.valueIndex))
+          rect.setAttribute("data-is-absolute", String(a.isAbsolute))
+          rect.setAttribute("data-path-id", String(paths.indexOf(pathEl)))
 
           svgRoot.appendChild(rect)
         }
@@ -701,7 +664,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         svgRoot.appendChild(handle)
       }
     }
-  }, [selectedElement, isDragging, svgCode, editMode, handlePointMouseDown])
+  }, [selectedElement, isDragging, svgCode, editMode])
 
   // Click outside to deselect
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
@@ -793,7 +756,10 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           cursor: isDragging ? "grabbing" : editMode === "points" ? "crosshair" : "default",
         }}
         onClick={handleSvgClick}
-        onMouseDown={handleMouseDown}
+        onMouseDown={(e) => {
+          handlePointOverlayMouseDown(e)
+          if (editMode !== "points") handleMouseDown(e)
+        }}
         onDoubleClick={handleDoubleClick}
       />
     </div>
