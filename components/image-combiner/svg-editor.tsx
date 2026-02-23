@@ -178,6 +178,22 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     isVCommand: boolean
   } | null>(null)
 
+  // Undo history
+  const undoStackRef = useRef<string[]>([])
+  const MAX_UNDO = 50
+  const lastSvgRef = useRef<string>(svgCode)
+
+  // Wrap onSvgChange to capture previous state for undo
+  const commitChange = useCallback((newSvg: string) => {
+    const prev = lastSvgRef.current
+    if (prev && prev !== newSvg) {
+      undoStackRef.current.push(prev)
+      if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift()
+    }
+    lastSvgRef.current = newSvg
+    onSvgChange(newSvg)
+  }, [onSvgChange])
+
   // Stable ref to setPointDragActive so native DOM listeners can call it
   const setPointDragActiveRef = useRef(setPointDragActive)
   setPointDragActiveRef.current = setPointDragActive
@@ -200,6 +216,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     svgContainerRef.current.appendChild(imported)
 
     setSelectedElement(null)
+    lastSvgRef.current = svgCode
+    undoStackRef.current = []
   }, [svgCode])
 
   const getTranslate = (el: SVGElement): { tx: number; ty: number } => {
@@ -303,12 +321,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       setIsDragging(false)
       dragStartRef.current = null
       const newSvg = serializeSvg()
-      if (newSvg) onSvgChange(newSvg)
+      if (newSvg) commitChange(newSvg)
     }
     window.addEventListener("mousemove", handleMove)
     window.addEventListener("mouseup", handleUp)
     return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp) }
-  }, [isDragging, serializeSvg, onSvgChange])
+  }, [isDragging, serializeSvg, commitChange])
 
   // Point drag effect -- activated by pointDragActive state
   useEffect(() => {
@@ -341,14 +359,14 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       pointDragRef.current = null
       setPointDragActive(false)
       const newSvg = serializeSvg()
-      if (newSvg) onSvgChange(newSvg)
+      if (newSvg) commitChange(newSvg)
       // Bump overlay key to force redraw with updated positions
       setOverlayKey((k) => k + 1)
     }
     window.addEventListener("mousemove", handleMove)
     window.addEventListener("mouseup", handleUp)
     return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp) }
-  }, [pointDragActive, serializeSvg, onSvgChange])
+  }, [pointDragActive, serializeSvg, commitChange])
 
   // Draw overlays: bounding box + path points (immediately on selection)
   useEffect(() => {
@@ -448,7 +466,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           window.removeEventListener("mouseup", upHandler)
           onDragEnd()
           const newSvg = serializeSvg()
-          if (newSvg) onSvgChange(newSvg)
+          if (newSvg) commitChange(newSvg)
           setOverlayKey((k) => k + 1)
         }
         window.addEventListener("mousemove", moveHandler)
@@ -774,12 +792,24 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         selectedElement.remove()
         setSelectedElement(null)
         const newSvg = serializeSvg()
-        if (newSvg) onSvgChange(newSvg)
+        if (newSvg) commitChange(newSvg)
+      }
+      // Ctrl+Z / Cmd+Z to undo
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        const activeEl = document.activeElement
+        if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
+        e.preventDefault()
+        const prev = undoStackRef.current.pop()
+        if (prev) {
+          lastSvgRef.current = prev
+          onSvgChange(prev)
+          setSelectedElement(null)
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedElement, serializeSvg, onSvgChange])
+  }, [selectedElement, serializeSvg, commitChange, onSvgChange])
 
   const handleZoom = (newZoom: number) => {
     setZoom(Math.max(25, Math.min(400, newZoom)))
