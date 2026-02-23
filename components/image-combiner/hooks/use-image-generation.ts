@@ -279,15 +279,23 @@ export function useImageGeneration({
 
   const loadGeneratedAsInput = async () => {
     const selectedGeneration = generations.find((g) => g.id === selectedGenerationId)
-    if (!selectedGeneration?.imageUrl) return
+    if (!selectedGeneration?.imageUrl && !selectedGeneration?.svgCode) return
 
     try {
-      const response = await fetch(selectedGeneration.imageUrl)
-      const blob = await response.blob()
-      const file = new File([blob], "generated-image.png", { type: "image/png" })
+      let file: File
+
+      if (selectedGeneration.svgCode) {
+        // For SVG generations, create an SVG file directly from the code
+        const svgBlob = new Blob([selectedGeneration.svgCode], { type: "image/svg+xml" })
+        file = new File([svgBlob], "generated-svg.svg", { type: "image/svg+xml" })
+      } else {
+        const response = await fetch(selectedGeneration.imageUrl!)
+        const blob = await response.blob()
+        file = new File([blob], "generated-image.png", { type: "image/png" })
+      }
 
       await onImageUpload(file, 1)
-      onToast("Image loaded into Input 1", "success")
+      onToast("SVG loaded into Input 1", "success")
     } catch (error) {
       console.error("Error loading image as input:", error)
       onToast("Error loading image", "error")
