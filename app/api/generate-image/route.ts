@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { streamText } from "ai"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 120
+export const maxDuration = 300
 
 const MAX_PROMPT_LENGTH = 5000
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB

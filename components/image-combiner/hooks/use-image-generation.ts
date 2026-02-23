@@ -195,39 +195,69 @@ export function useImageGeneration({
             signal: controller.signal,
           })
 
-          console.log("[v0] Response status:", response.status, response.statusText)
-
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
             throw new Error(`${errorData.error}${errorData.details ? `: ${errorData.details}` : ""}`)
           }
 
-          const data = await response.json()
+          // Read SSE stream -- keeps connection alive to avoid 504 timeouts
+          const reader = response.body?.getReader()
+          if (!reader) throw new Error("No response body")
 
-          console.log("[v0] === CLIENT: Response received ===")
-          console.log("[v0] Has svgCode:", !!data.svgCode, data.svgCode ? `(${data.svgCode.length} chars)` : "")
-          console.log("[v0] Has url:", !!data.url)
-          console.log("[v0] Has error:", !!data.error, data.error || "")
-          if (data.svgCode) {
-            console.log("[v0] SVG preview (first 200 chars):", data.svgCode.substring(0, 200))
+          const decoder = new TextDecoder()
+          let fullText = ""
+          let buffer = ""
+
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split("\n")
+            buffer = lines.pop() || ""
+
+            for (const line of lines) {
+              const trimmed = line.trim()
+              if (trimmed.startsWith("data: ")) {
+                const payload = trimmed.slice(6)
+                if (payload === "[DONE]") break
+                try {
+                  const parsed = JSON.parse(payload)
+                  if (typeof parsed === "string") {
+                    fullText += parsed
+                  } else if (parsed.error) {
+                    throw new Error(parsed.error)
+                  }
+                } catch {
+                  // skip malformed SSE lines
+                }
+              }
+            }
+          }
+
+          // Extract SVG from accumulated text
+          const svgMatch = fullText.match(/<svg[\s\S]*<\/svg>/i)
+          let svgCode = svgMatch ? svgMatch[0] : null
+
+          // Also try stripping markdown fences
+          if (!svgCode) {
+            const stripped = fullText.replace(/```(?:svg|xml)?\s*/gi, "").replace(/```\s*/g, "")
+            const retryMatch = stripped.match(/<svg[\s\S]*<\/svg>/i)
+            svgCode = retryMatch ? retryMatch[0] : null
           }
 
           clearInterval(progressInterval)
 
-          if (data.svgCode || data.url) {
-            // If we have SVG code, create a data URL from it for thumbnail/preview compatibility
-            let imageUrl = data.url || null
-            if (data.svgCode && !imageUrl) {
-              const svgBlob = new Blob([data.svgCode], { type: "image/svg+xml" })
-              imageUrl = URL.createObjectURL(svgBlob)
-            }
+          if (svgCode) {
+            const svgBlob = new Blob([svgCode], { type: "image/svg+xml" })
+            const imageUrl = URL.createObjectURL(svgBlob)
 
             const completedGeneration: Generation = {
               id: generationId,
               status: "complete",
               progress: 100,
               imageUrl: imageUrl,
-              svgCode: data.svgCode || null,
+              svgCode: svgCode,
               prompt: effectivePrompt,
               timestamp: Date.now(),
               createdAt: new Date().toISOString(),
@@ -236,8 +266,9 @@ export function useImageGeneration({
             }
 
             setGenerations((prev) => prev.filter((gen) => gen.id !== generationId))
-
             await addGeneration(completedGeneration)
+          } else {
+            throw new Error("No valid SVG found in model response")
           }
 
           if (selectedGenerationId === generationId) {
