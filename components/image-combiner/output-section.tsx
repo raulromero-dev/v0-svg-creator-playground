@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ProgressBar } from "./progress-bar"
+import { SvgEditor } from "./svg-editor"
 import { useMobile } from "@/hooks/use-mobile"
 import type { Generation } from "./types"
 import { useEffect } from "react"
@@ -23,6 +24,8 @@ interface OutputSectionProps {
   onCopy: () => void
   onDownload: () => void
   onOpenInNewTab: () => void
+  onSvgEdit: (newSvgCode: string) => void
+  editedSvgCode: string | null
 }
 
 export function OutputSection({
@@ -41,6 +44,8 @@ export function OutputSection({
   onCopy,
   onDownload,
   onOpenInNewTab,
+  onSvgEdit,
+  editedSvgCode,
 }: OutputSectionProps) {
   const isMobile = useMobile()
 
@@ -76,9 +81,11 @@ export function OutputSection({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [generations, selectedGenerationId, setSelectedGenerationId])
 
+  const currentSvgCode = editedSvgCode || selectedGeneration?.svgCode || null
+
   const generatedImage =
     selectedGeneration?.status === "complete" && (selectedGeneration.imageUrl || selectedGeneration.svgCode)
-      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: selectedGeneration.svgCode }
+      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: currentSvgCode }
       : null
 
   const renderButtons = (className?: string) => (
@@ -149,15 +156,9 @@ export function OutputSection({
           <div className="absolute inset-0 flex flex-col select-none">
             <div className="flex-1 flex items-center justify-center relative group max-w-full max-h-full overflow-hidden">
               {generatedImage.svgCode ? (
-                <iframe
-                  srcDoc={`<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}svg{max-width:100%;max-height:100%;width:auto;height:auto}</style></head><body>${generatedImage.svgCode}</body></html>`}
-                  title="Generated SVG"
-                  sandbox="allow-same-origin"
-                  className={cn(
-                    "w-full h-full border-0 bg-white rounded transition-all duration-700 ease-out cursor-pointer",
-                    "opacity-100 scale-100",
-                  )}
-                  onClick={onOpenFullscreen}
+                <SvgEditor
+                  svgCode={generatedImage.svgCode}
+                  onSvgChange={onSvgEdit}
                 />
               ) : (
                 <img

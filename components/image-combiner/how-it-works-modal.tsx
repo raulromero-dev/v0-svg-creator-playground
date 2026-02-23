@@ -130,8 +130,8 @@ export function HowItWorksModal({ open, onOpenChange }: HowItWorksModalProps) {
             </StepCard>
 
             <StepCard number="03" title="Iterate">
-              Use the generated SVG as input for further refinement. Click "Use as Input" to feed results
-              back into the editor and keep iterating.
+              Click any element in the generated SVG to select it and drag vector points to reshape it directly.
+              Use "Use as Input" to feed your edited result back for further AI refinement. Undo with Ctrl+Z.
             </StepCard>
 
             <StepCard number="04" title="Export">
