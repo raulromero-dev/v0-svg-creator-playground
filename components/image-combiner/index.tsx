@@ -33,6 +33,7 @@ export function ImageCombiner() {
   const [dropZoneHover, setDropZoneHover] = useState<1 | 2 | null>(null)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [logoLoaded, setLogoLoaded] = useState(false)
+  const [editedSvgCode, setEditedSvgCode] = useState<string | null>(null)
 
 
   const [leftWidth, setLeftWidth] = useState(50) // percentage
@@ -100,9 +101,10 @@ export function ImageCombiner() {
 
   const selectedGeneration = persistedGenerations.find((g) => g.id === selectedGenerationId) || persistedGenerations[0]
   const isLoading = persistedGenerations.some((g) => g.status === "loading")
+  const currentSvgCode = editedSvgCode || selectedGeneration?.svgCode || null
   const generatedImage =
     selectedGeneration?.status === "complete" && (selectedGeneration.imageUrl || selectedGeneration.svgCode)
-      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: selectedGeneration.svgCode }
+      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: currentSvgCode }
       : null
 
   const hasImages = useUrls ? image1Url || image2Url : image1 || image2
@@ -113,6 +115,8 @@ export function ImageCombiner() {
     if (selectedGeneration?.status === "complete" && selectedGeneration?.imageUrl) {
       setImageLoaded(false)
     }
+    // Reset edits when switching generations
+    setEditedSvgCode(null)
   }, [selectedGenerationId, selectedGeneration?.imageUrl, setImageLoaded])
 
   useEffect(() => {
@@ -798,10 +802,22 @@ export function ImageCombiner() {
                       onCancelGeneration={cancelGeneration}
                       onDeleteGeneration={deleteGeneration}
                       onOpenFullscreen={openFullscreen}
-                      onLoadAsInput={loadGeneratedAsInput}
+                      onLoadAsInput={async () => {
+                        // If SVG was edited, use the edited version
+                        if (editedSvgCode) {
+                          const svgBlob = new Blob([editedSvgCode], { type: "image/svg+xml" })
+                          const file = new File([svgBlob], "edited-svg.svg", { type: "image/svg+xml" })
+                          await handleImageUpload(file, 1)
+                          showToast("Edited SVG loaded into Input 1", "success")
+                        } else {
+                          loadGeneratedAsInput()
+                        }
+                      }}
                       onCopy={copyImageToClipboard}
                       onDownload={downloadImage}
                       onOpenInNewTab={openImageInNewTab}
+                      onSvgEdit={setEditedSvgCode}
+                      editedSvgCode={editedSvgCode}
                     />
                   </div>
                 </div>
