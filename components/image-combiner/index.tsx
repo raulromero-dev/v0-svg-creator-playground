@@ -854,12 +854,12 @@ export function ImageCombiner() {
                   </button>
                   <span className="text-white/20 hidden sm:inline">•</span>
                   <a
-                    href="https://x.com/estebansuarez"
+                    href="https://x.com/Raul_RomeroM"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white/70 transition-colors flex items-center gap-1"
                   >
-                    Feedback?
+                    Feedback? @Raul_RomeroM
                   </a>
                 </div>
               </div>

@@ -54,11 +54,20 @@ export function ImageUploadBox({ imageNumber, preview, onDrop, onClear, onSelect
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <img
-            src={preview || "/placeholder.svg"}
-            alt={`Image ${imageNumber}`}
-            className="w-full h-full object-contain"
-          />
+          {preview.startsWith("data:image/svg") || preview.endsWith(".svg") || preview.startsWith("blob:") ? (
+            <iframe
+              src={preview}
+              title={`Image ${imageNumber}`}
+              sandbox="allow-same-origin"
+              className="w-full h-full border-0 pointer-events-none bg-white"
+            />
+          ) : (
+            <img
+              src={preview || "/placeholder.svg"}
+              alt={`Image ${imageNumber}`}
+              className="w-full h-full object-contain"
+            />
+          )}
         </div>
       ) : (
         <div className="text-center text-gray-400 py-1 sm:py-4">

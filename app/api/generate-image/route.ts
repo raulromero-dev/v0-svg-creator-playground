@@ -7,7 +7,7 @@ export const maxDuration = 120
 
 const MAX_PROMPT_LENGTH = 5000
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"]
 
 interface GenerateImageResponse {
   svgCode: string
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
         }
         if (!ALLOWED_IMAGE_TYPES.includes(image1.type)) {
           return NextResponse.json<ErrorResponse>(
-            { error: "Image 1 has invalid format. Allowed: JPEG, PNG, WebP, GIF" },
+            { error: "Image 1 has invalid format. Allowed: JPEG, PNG, WebP, GIF, SVG" },
             { status: 400 },
           )
         }
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         }
         if (!ALLOWED_IMAGE_TYPES.includes(image2.type)) {
           return NextResponse.json<ErrorResponse>(
-            { error: "Image 2 has invalid format. Allowed: JPEG, PNG, WebP, GIF" },
+            { error: "Image 2 has invalid format. Allowed: JPEG, PNG, WebP, GIF, SVG" },
             { status: 400 },
           )
         }
@@ -192,19 +192,39 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const image1DataUrl = await convertToDataUrl(hasImage1 ? image1 || image1Url : "")
-      const image2DataUrl = hasImage2 ? await convertToDataUrl(image2 || image2Url) : null
+      // Helper to check if a file is SVG
+      const isSvgFile = (file: File | null) => file && (file.type === "image/svg+xml" || file.name?.endsWith(".svg"))
+
+      // Helper to read SVG file as text
+      const readSvgAsText = async (file: File): Promise<string> => {
+        const arrayBuffer = await file.arrayBuffer()
+        return new TextDecoder().decode(arrayBuffer)
+      }
 
       const messageParts: Array<{ type: "text" | "image"; text?: string; image?: string }> = []
 
-      messageParts.push({ type: "image", image: image1DataUrl })
-      if (image2DataUrl) {
-        messageParts.push({ type: "image", image: image2DataUrl })
+      // For SVG files, include the SVG code as text; for raster images, include as base64
+      if (image1 && isSvgFile(image1)) {
+        const svgText = await readSvgAsText(image1)
+        messageParts.push({ type: "text", text: `Here is the reference SVG code for image 1:\n\n${svgText}` })
+      } else {
+        const image1DataUrl = await convertToDataUrl(hasImage1 ? image1 || image1Url : "")
+        messageParts.push({ type: "image", image: image1DataUrl })
+      }
+
+      if (hasImage2) {
+        if (image2 && isSvgFile(image2)) {
+          const svgText = await readSvgAsText(image2)
+          messageParts.push({ type: "text", text: `Here is the reference SVG code for image 2:\n\n${svgText}` })
+        } else {
+          const image2DataUrl = await convertToDataUrl(image2 || image2Url)
+          messageParts.push({ type: "image", image: image2DataUrl })
+        }
       }
 
       const editingPrompt = hasImage2
-        ? `${prompt}. Convert and combine these two images into a clean SVG graphic with vector-friendly elements, following the instructions.`
-        : `${prompt}. Convert this image into a clean SVG graphic with simplified, vector-friendly elements based on the instructions.`
+        ? `${prompt}. Convert and combine these two inputs into a clean SVG graphic with vector-friendly elements, following the instructions.`
+        : `${prompt}. Use this input as a reference and generate a new SVG graphic with simplified, vector-friendly elements based on the instructions.`
 
       messageParts.push({ type: "text", text: editingPrompt })
 
