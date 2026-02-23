@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 800" width="100%" height="100%" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%;">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5A8BBF"/>
+      <stop offset="55%" stop-color="#A0B9D1"/>
+      <stop offset="100%" stop-color="#F2C3A7"/>
+    </linearGradient>
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#163559"/>
+      <stop offset="100%" stop-color="#0B1E36"/>
+    </linearGradient>
+    <clipPath id="trussClip">
+      <polygon points="0,710 450,590 450,620 0,740"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background Sky & Water -->
+  <rect width="450" height="480" fill="url(#skyGrad)" transform="translate(0, 0)"/>
+  <rect x="0" y="480" width="450" height="320" fill="url(#waterGrad)" transform="translate(0, 0)"/>
+  
+  <!-- Subtle Sun -->
+  <circle cx="380" cy="420" r="45" fill="#FFFFFF" opacity="0.15"/>
+  <circle cx="380" cy="420" r="25" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- Stylized Distant Clouds -->
+  <path d="M 40 180 L 140 180 M 60 186 L 160 186" stroke="#FFFFFF" stroke-width="2.5" opacity="0.15" stroke-linecap="round"/>
+  <path d="M 280 130 L 400 130 M 320 136 L 420 136" stroke="#FFFFFF" stroke-width="2.5" opacity="0.15" stroke-linecap="round"/>
+  <path d="M -10 320 L 80 320 M 20 326 L 100 326" stroke="#FFFFFF" stroke-width="2.5" opacity="0.15" stroke-linecap="round"/>
+
+  <!-- Flat Horizon Line -->
+  <line x1="0" y1="480" x2="450" y2="480" stroke="#8799B0" stroke-width="1.5"/>
+
+  <!-- Minimalist Distant City Skyline -->
+  <g fill="#9BAFC4" opacity="0.75">
+    <rect x="15" y="472" width="12" height="8"/>
+    <rect x="30" y="465" width="15" height="15"/>
+    <rect x="37" y="455" width="2" height="10"/>
+    <rect x="48" y="452" width="10" height="28"/>
+    <rect x="62" y="460" width="14" height="20"/>
+    <rect x="80" y="468" width="8" height="12"/>
+    <rect x="355" y="472" width="12" height="8"/>
+    <rect x="370" y="464" width="18" height="16"/>
+    <rect x="392" y="456" width="12" height="24"/>
+    <rect x="397" y="446" width="2" height="10"/>
+    <rect x="410" y="465" width="20" height="15"/>
+    <rect x="435" y="455" width="15" height="25"/>
+  </g>
+
+  <!-- Distant Boats & Water Ripples -->
+  <g stroke="#8799B0" stroke-width="1.5" opacity="0.2" stroke-linecap="round">
+    <path d="M 20 510 L 60 510 M 180 530 L 240 530 M 360 550 L 420 550 M 80 590 L 150 590 M 290 640 L 350 640 M 390 690 L 440 690"/>
+  </g>
+  <g>
+    <!-- Boat 1 -->
+    <polygon points="120,530 120,515 130,530" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M 115 530 L 135 530" stroke="#E6E6E6" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Boat 2 -->
+    <polygon points="320,500 320,488 327,500" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M 316 500 L 330 500" stroke="#E6E6E6" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Background Main Cable (Right) & Suspenders -->
+  <g transform="translate(0, 0)">
+    <!-- Right Cable Front Drape (Leftwards mathematically smooth catenary) -->
+    <path d="M 230 144 L 230 650 M 190 204 L 190 665 M 150 258 L 150 675 M 110 305 L 110 685" fill="none" stroke="#A92E23" stroke-width="1" opacity="0.8"/>
+    <path d="M 265 85 Q 165 260 65 350" fill="none" stroke="#A92E23" stroke-width="4" stroke-linecap="round"/>
+    
+    <!-- Right Cable Back Drape (Rightwards mathematically smooth catenary) -->
+    <path d="M300 173 L300 630 M340 261 L340 615 M380 356.1333312988281 L380 600 M420 418 L420 590 M450.4000244140625 444.3333740234375 L450.4000244140625 581.066650390625" fill="none" stroke="#A92E23" stroke-width="1" opacity="0.8"/>
+    <path d="M265 85 Q385 400 448.73333740234375 447.46661376953125" fill="none" stroke="#A92E23" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Right Pillar (Background Tower Layer) -->
+  <g transform="translate(-1.066680908203125, -1.066680908203125)">
+    <!-- Main Pillar Base -->
+    <polygon points="250,120 232,108 217,788 235,800" fill="#9A1D13"/>
+    <polygon points="250,120 280,120 310,800 235,800" fill="#E34132"/>
+    <polygon points="250,120 280,120 262,108 232,108" fill="#FF7666"/>
+    
+    <!-- Edge Bevel Highlights -->
+    <line x1="250" y1="120" x2="235" y2="800" stroke="#FFFFFF" opacity="0.25" stroke-width="1"/>
+    <line x1="280" y1="120" x2="310" y2="800" stroke="#9A1D13" opacity="0.3" stroke-width="1"/>
+
+    <!-- Art Deco Vertical Ribs -->
+    <polygon points="258,120 262,120 275,800 255,800" fill="#D3362A"/>
+    <polygon points="268,120 272,120 295,800 280,800" fill="#D3362A"/>
+
+    <!-- Crown Tier 1 -->
+    <polygon points="255,100 250,120 232,108 237,88" fill="#9A1D13"/>
+    <polygon points="255,100 275,100 280,120 250,120" fill="#E34132"/>
+    <polygon points="255,100 275,100 257,88 237,88" fill="#FF7666"/>
+    <line x1="255" y1="100" x2="250" y2="120" stroke="#FFFFFF" opacity="0.3" stroke-width="0.75"/>
+
+    <!-- Crown Tier 2 -->
+    <polygon points="260,85 255,100 237,88 242,73" fill="#9A1D13"/>
+    <polygon points="260,85 270,85 275,100 255,100" fill="#E34132"/>
+    <polygon points="260,85 270,85 252,73 242,73" fill="#FF7666"/>
+    <line x1="260" y1="85" x2="255" y2="100" stroke="#FFFFFF" opacity="0.3" stroke-width="0.75"/>
+  </g>
+
+  <!-- Bridge Road Deck & Truss -->
+  <g>
+    <!-- Cast Shadow on Water -->
+    <polygon points="0,710 450,590 450,650 0,770" fill="#0A1829" opacity="0.3"/>
+    
+    <!-- Road Surface -->
+    <polygon points="0,680 450,560 450,580 0,700" fill="#4A4A4A"/>
+    <!-- Road Side Thickness -->
+    <polygon points="0,700 450,580 450,590 0,710" fill="#2B2B2B"/>
+    
+    <!-- Shadows on Road from Pillars -->
+    <polygon points="230,620 320,595 290,595 210,620" fill="#2B2B2B" opacity="0.5"/>
+    <polygon points="120,650 210,625 180,625 100,650" fill="#2B2B2B" opacity="0.5"/>
+
+    <!-- Truss Framework Backing -->
+    <polygon points="0,710 450,590 450,620 0,740" fill="#9A1D13"/>
+    
+    <!-- Truss Diagonal Criss-Cross Clipped perfectly to boundaries -->
+    <g clip-path="url(#trussClip)">
+      <path d="M 0 740 L 20 704 L 40 729 L 60 694 L 80 718 L 100 683 L 120 708 L 140 672 L 160 697 L 180 662 L 200 686 L 220 651 L 240 676 L 260 640 L 280 665 L 300 630 L 320 654 L 340 619 L 360 644 L 380 608 L 400 633 L 420 598 L 440 622 L 460 587" fill="none" stroke="#E34132" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M 0 710 L 20 740 L 40 704 L 60 729 L 80 694 L 100 718 L 120 683 L 140 708 L 160 672 L 180 697 L 200 662 L 220 686 L 240 651 L 260 676 L 280 640 L 300 665 L 320 630 L 340 654 L 360 619 L 380 644 L 400 608 L 420 633 L 440 598 L 460 622" fill="none" stroke="#E34132" stroke-width="1.5" stroke-linejoin="round" opacity="0.6"/>
+    </g>
+    
+    <!-- Truss Top & Bottom Rails -->
+    <line x1="0" y1="710" x2="450" y2="590" stroke="#E34132" stroke-width="2.5"/>
+    <line x1="0" y1="740" x2="450" y2="620" stroke="#E34132" stroke-width="2.5"/>
+
+    <!-- Tiny Stylized Cars with shadows -->
+    <!-- Car 1 -->
+    <ellipse cx="100" cy="653" rx="4" ry="2" fill="#222222" opacity="0.5" transform="rotate(-15 100 653)"/>
+    <ellipse cx="100" cy="650" rx="4" ry="2" fill="#FFFFFF" transform="rotate(-15 100 650)"/>
+    <!-- Car 2 -->
+    <ellipse cx="135" cy="642" rx="4" ry="2" fill="#222222" opacity="0.5" transform="rotate(-15 135 642)"/>
+    <ellipse cx="135" cy="639" rx="4" ry="2" fill="#E34132" transform="rotate(-15 135 639)"/>
+    <!-- Car 3 -->
+    <ellipse cx="250" cy="608" rx="3.5" ry="1.75" fill="#222222" opacity="0.5" transform="rotate(-15 250 608)"/>
+    <ellipse cx="250" cy="605" rx="3.5" ry="1.75" fill="#FFFFFF" transform="rotate(-15 250 605)"/>
+    <!-- Car 4 -->
+    <ellipse cx="300" cy="593" rx="3.5" ry="1.75" fill="#222222" opacity="0.5" transform="rotate(-15 300 593)"/>
+    <ellipse cx="300" cy="590" rx="3.5" ry="1.75" fill="#FFFFFF" transform="rotate(-15 300 590)"/>
+    <!-- Car 5 -->
+    <ellipse cx="360" cy="576" rx="3" ry="1.5" fill="#222222" opacity="0.5" transform="rotate(-15 360 576)"/>
+    <ellipse cx="360" cy="574" rx="3" ry="1.5" fill="#E34132" transform="rotate(-15 360 574)"/>
+  </g>
+
+  <!-- Horizontal Struts (Connecting the pillars) -->
+  <g>
+    <!-- Top Strut -->
+    <polygon points="182,220 248,220 230,208 164,208" fill="#FF7666"/>
+    <polygon points="182,220 248,220 247,280 183,280" fill="#E34132"/>
+    <line x1="182.5" y1="240" x2="247.5" y2="240" stroke="#B3241A" stroke-width="1.5"/>
+    <line x1="183" y1="260" x2="247" y2="260" stroke="#B3241A" stroke-width="1.5"/>
+
+    <!-- Middle Strut -->
+    <polygon points="187,440 243,440 225,428 169,428" fill="#FF7666"/>
+    <polygon points="187,440 243,440 241,510 189,510" fill="#E34132"/>
+    <line x1="187.5" y1="463" x2="242.5" y2="463" stroke="#B3241A" stroke-width="1.5"/>
+    <line x1="188" y1="486" x2="242" y2="486" stroke="#B3241A" stroke-width="1.5"/>
+
+    <!-- Bottom Strut (Below road) -->
+    <polygon points="193,730 237,730 219,718 175,718" fill="#FF7666"/>
+    <polygon points="193,730 237,730 235,800 195,800" fill="#E34132"/>
+    <line x1="193.5" y1="755" x2="236.5" y2="755" stroke="#B3241A" stroke-width="1.5"/>
+    <line x1="194" y1="780" x2="236" y2="780" stroke="#B3241A" stroke-width="1.5"/>
+  </g>
+
+  <!-- Left Pillar (Foreground Tower Layer) -->
+  <g transform="translate(0, 0)">
+    <!-- Main Pillar Base -->
+    <polygon points="150,120 132,108 102,788 120,800" fill="#9A1D13"/>
+    <polygon points="150,120 180,120 195,800 120,800" fill="#E34132"/>
+    <polygon points="150,120 180,120 162,108 132,108" fill="#FF7666"/>
+    
+    <!-- Edge Bevel Highlights -->
+    <line x1="150" y1="120" x2="120" y2="800" stroke="#FFFFFF" opacity="0.25" stroke-width="1"/>
+    <line x1="180" y1="120" x2="195" y2="800" stroke="#9A1D13" opacity="0.3" stroke-width="1"/>
+
+    <!-- Art Deco Vertical Ribs -->
+    <polygon points="158,120 162,120 150,800 140,800" fill="#D3362A"/>
+    <polygon points="168,120 172,120 175,800 165,800" fill="#D3362A"/>
+
+    <!-- Crown Tier 1 -->
+    <polygon points="155,100 150,120 132,108 137,88" fill="#9A1D13"/>
+    <polygon points="155,100 175,100 180,120 150,120" fill="#E34132"/>
+    <polygon points="155,100 175,100 157,88 137,88" fill="#FF7666"/>
+    <line x1="155" y1="100" x2="150" y2="120" stroke="#FFFFFF" opacity="0.3" stroke-width="0.75"/>
+
+    <!-- Crown Tier 2 -->
+    <polygon points="160,85 155,100 137,88 142,73" fill="#9A1D13"/>
+    <polygon points="160,85 170,85 175,100 155,100" fill="#E34132"/>
+    <polygon points="160,85 170,85 152,73 142,73" fill="#FF7666"/>
+    <line x1="160" y1="85" x2="155" y2="100" stroke="#FFFFFF" opacity="0.3" stroke-width="0.75"/>
+  </g>
+
+  <!-- Foreground Main Cable (Left) & Suspenders -->
+  <g transform="translate(0, -4.266632080078125)">
+    <!-- Left Cable Front Drape (Leftwards mathematically smooth catenary) -->
+    <path d="M130 189 L121.61906433105469 215.92059326171875 M100 267 L100 690 M70 336 L70 695 M40 402.4666442871094 L40 700 M10 444 L10 705" fill="none" stroke="#B3241A" stroke-width="1.5"/>
+    <path d="M165 85 Q65 400 0.20000076293945312 455.1999816894531" fill="none" stroke="#E34132" stroke-width="5" stroke-linecap="round"/>
+    
+    <!-- Left Cable Back Drape (Rightwards mathematically smooth catenary) -->
+    <path d="M200 172 L200 665 M240 263 L240 650 M280 344 L280 640 M320 431.9333190917969 L320 625 M361.066650390625 501.1999816894531 L360 615 M400 553 L400 605 M440 582 L440 595" fill="none" stroke="#B3241A" stroke-width="1.5"/>
+    <path d="M165 85 Q345 550 447.1333312988281 583.8666381835938" fill="none" stroke="#E34132" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Foreground Bottom Corner Hint (Marin Headlands Rock) -->
+  <g>
+    <polygon points="0,750 70,800 0,800" fill="#3D2B24"/>
+    <polygon points="0,750 35,775 0,800" fill="#4A342B"/>
+    <polygon points="0,770 20,785 0,800" fill="#2E1F1A"/>
+  </g>
+
+</svg>

@@ -5,7 +5,7 @@ import { DEFAULT_ASPECT_RATIOS, ALL_ASPECT_RATIOS } from "../constants"
 import type { AspectRatioOption } from "../types"
 
 export function useAspectRatio() {
-  const [aspectRatio, setAspectRatio] = useState("square")
+  const [aspectRatio, setAspectRatio] = useState("portrait")
   const [availableAspectRatios, setAvailableAspectRatios] = useState<AspectRatioOption[]>(DEFAULT_ASPECT_RATIOS)
 
   const detectAspectRatio = (width: number, height: number): string => {
