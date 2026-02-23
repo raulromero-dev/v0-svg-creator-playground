@@ -133,11 +133,13 @@ export function ImageCombiner() {
           progress: 100,
           imageUrl,
           svgCode,
-          prompt: "A high-angle, architectural perspective of the Golden Gate Bridge tower featuring clean, sharp vector lines and the iconic International Orange steel structure.",
+          prompt: "A high-angle, architectural perspective of the Golden Gate Bridge tower featuring clean, sharp vector lines and the iconic International Orange steel structure. The central focus is a vertical, multi-tiered Art Deco tower defined by its rectangular openings and repetitive structural bracing. Thick primary suspension cables arch from the top of the tower, connected to the road deck by a series of thin, perfectly vertical tension lines. A diagonal perspective of the bridge deck reveals the truss framework underneath. In the distance, a flat horizon line separates the deep blue water from a minimalist city skyline and a soft, hazy sky. All elements are rendered with flat, distinct colors and clear boundaries suitable for a layered SVG graphic.",
           timestamp: Date.now(),
+          aspectRatio: "portrait",
         }
         await addGeneration(defaultGen)
         setSelectedGenerationId(defaultGen.id)
+        setAspectRatio("portrait")
       } catch (err) {
         console.error("Failed to load default SVG:", err)
       }

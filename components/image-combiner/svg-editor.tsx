@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useCallback, useEffect } from "react"
+import { getSelectableElement as getSelectableElementFn } from "./get-selectable-element"
 
 interface SvgEditorProps {
   svgCode: string
@@ -255,47 +256,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   }, [])
 
   const getSelectableElement = (target: EventTarget | null): SVGElement | null => {
-    if (!target || !(target instanceof SVGElement)) return null
-    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg")
-    if (!svgRoot) return null
-
-    // Skip overlay elements
-    if ((target as Element).classList?.contains("v0-selection-overlay") ||
-        (target as Element).classList?.contains("v0-point-overlay")) return null
-
-    const skipTags = ["defs", "style", "metadata", "title", "desc", "clippath", "lineargradient", "radialgradient", "stop"]
-    const shapeTags = ["path", "rect", "circle", "ellipse", "line", "polygon", "polyline", "text", "image", "use"]
-
-    // If the click landed directly on a visible shape element, select that element
-    let current: SVGElement | null = target
-    const tag = current.tagName.toLowerCase()
-
-    if (tag === "svg" && current === svgRoot) return null
-    if (skipTags.includes(tag)) return null
-
-    // If it's a shape element, return it directly
-    if (shapeTags.includes(tag)) return current
-
-    // If it's a group, return it (user clicked on the group boundary)
-    if (tag === "g") {
-      // Make sure it's within the editable SVG
-      let check: Node | null = current
-      while (check && check !== svgRoot) {
-        check = check.parentNode
-      }
-      return check === svgRoot ? current : null
-    }
-
-    // Walk up to find nearest selectable shape or group
-    while (current && current !== svgRoot) {
-      const t = current.tagName.toLowerCase()
-      if (skipTags.includes(t)) return null
-      if (shapeTags.includes(t) || t === "g") return current
-      if (current.parentElement instanceof SVGElement) {
-        current = current.parentElement as SVGElement
-      } else return null
-    }
-    return null
+    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") ?? null
+    return getSelectableElementFn(target, svgRoot)
   }
 
   // Click to select element
@@ -444,9 +406,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     // --- Collect all editable child shapes ---
     const getAllEditableElements = (el: SVGElement): SVGElement[] => {
-      const tag = el.tagName.toLowerCase()
+      const elTag = el.tagName.toLowerCase()
       const editableTags = ["path", "polygon", "polyline", "rect", "circle", "ellipse", "line"]
-      if (editableTags.includes(tag)) return [el]
+      if (editableTags.includes(elTag)) return [el]
       const result: SVGElement[] = []
       for (const child of Array.from(el.querySelectorAll(editableTags.join(",")))) {
         result.push(child as SVGElement)
@@ -838,12 +800,16 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
         e.stopPropagation()
+        console.log("[v0] Undo requested, stack length:", undoStackRef.current.length)
         const prev = undoStackRef.current.pop()
         if (prev) {
+          console.log("[v0] Restoring previous SVG, remaining stack:", undoStackRef.current.length)
           isUndoingRef.current = true
           lastSvgRef.current = prev
           onSvgChangeRef.current(prev)
           setSelectedElement(null)
+        } else {
+          console.log("[v0] Undo stack empty")
         }
         return
       }
@@ -852,6 +818,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         const activeEl = document.activeElement
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
+        console.log("[v0] Deleting selected element")
         selectedElementRef.current.remove()
         setSelectedElement(null)
         const newSvg = serializeSvgRef.current()
