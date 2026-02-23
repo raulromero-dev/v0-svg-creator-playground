@@ -7,13 +7,207 @@ interface SvgEditorProps {
   onSvgChange: (newSvgCode: string) => void
 }
 
+// ---- Path command parser/serializer ----
+
+interface PathPoint {
+  type: string
+  values: number[]
+}
+
+function parsePath(d: string): PathPoint[] {
+  const commands: PathPoint[] = []
+  const regex = /([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g
+  let match
+  while ((match = regex.exec(d)) !== null) {
+    const type = match[1]
+    const rawVals = match[2].trim()
+    const values = rawVals.length > 0
+      ? rawVals.split(/[\s,]+/).map(Number).filter((n) => !isNaN(n))
+      : []
+    commands.push({ type, values })
+  }
+  return commands
+}
+
+function serializePath(commands: PathPoint[]): string {
+  return commands.map((cmd) => `${cmd.type}${cmd.values.join(" ")}`).join(" ")
+}
+
+// Extract anchor points and control handles from parsed path commands
+interface AnchorPoint {
+  cmdIndex: number
+  valueIndex: number // index into values array for x (y is +1)
+  x: number
+  y: number
+  isAbsolute: boolean
+}
+
+interface ControlHandle {
+  cmdIndex: number
+  valueIndex: number
+  x: number
+  y: number
+  // The anchor it's attached to
+  anchorX: number
+  anchorY: number
+  isAbsolute: boolean
+}
+
+function getPointsAndHandles(commands: PathPoint[]) {
+  const anchors: AnchorPoint[] = []
+  const handles: ControlHandle[] = []
+  let curX = 0, curY = 0
+  let startX = 0, startY = 0
+
+  for (let i = 0; i < commands.length; i++) {
+    const { type, values } = commands[i]
+    const isAbs = type === type.toUpperCase()
+
+    switch (type.toUpperCase()) {
+      case "M": {
+        // M/m x y (and subsequent implicit L)
+        for (let j = 0; j < values.length; j += 2) {
+          const x = isAbs ? values[j] : curX + values[j]
+          const y = isAbs ? values[j + 1] : curY + values[j + 1]
+          anchors.push({ cmdIndex: i, valueIndex: j, x, y, isAbsolute: isAbs })
+          curX = x
+          curY = y
+          if (j === 0) { startX = x; startY = y }
+        }
+        break
+      }
+      case "L": {
+        for (let j = 0; j < values.length; j += 2) {
+          const x = isAbs ? values[j] : curX + values[j]
+          const y = isAbs ? values[j + 1] : curY + values[j + 1]
+          anchors.push({ cmdIndex: i, valueIndex: j, x, y, isAbsolute: isAbs })
+          curX = x
+          curY = y
+        }
+        break
+      }
+      case "H": {
+        for (let j = 0; j < values.length; j++) {
+          const x = isAbs ? values[j] : curX + values[j]
+          anchors.push({ cmdIndex: i, valueIndex: j, x, y: curY, isAbsolute: isAbs })
+          curX = x
+        }
+        break
+      }
+      case "V": {
+        for (let j = 0; j < values.length; j++) {
+          const y = isAbs ? values[j] : curY + values[j]
+          anchors.push({ cmdIndex: i, valueIndex: j, x: curX, y, isAbsolute: isAbs })
+          curY = y
+        }
+        break
+      }
+      case "C": {
+        // C cp1x cp1y cp2x cp2y x y
+        for (let j = 0; j < values.length; j += 6) {
+          const cp1x = isAbs ? values[j] : curX + values[j]
+          const cp1y = isAbs ? values[j + 1] : curY + values[j + 1]
+          const cp2x = isAbs ? values[j + 2] : curX + values[j + 2]
+          const cp2y = isAbs ? values[j + 3] : curY + values[j + 3]
+          const x = isAbs ? values[j + 4] : curX + values[j + 4]
+          const y = isAbs ? values[j + 5] : curY + values[j + 5]
+
+          // Control handle 1 attached to previous anchor
+          handles.push({ cmdIndex: i, valueIndex: j, x: cp1x, y: cp1y, anchorX: curX, anchorY: curY, isAbsolute: isAbs })
+          // Control handle 2 attached to the endpoint
+          handles.push({ cmdIndex: i, valueIndex: j + 2, x: cp2x, y: cp2y, anchorX: x, anchorY: y, isAbsolute: isAbs })
+          // Endpoint anchor
+          anchors.push({ cmdIndex: i, valueIndex: j + 4, x, y, isAbsolute: isAbs })
+
+          curX = x
+          curY = y
+        }
+        break
+      }
+      case "S": {
+        // S cp2x cp2y x y
+        for (let j = 0; j < values.length; j += 4) {
+          const cp2x = isAbs ? values[j] : curX + values[j]
+          const cp2y = isAbs ? values[j + 1] : curY + values[j + 1]
+          const x = isAbs ? values[j + 2] : curX + values[j + 2]
+          const y = isAbs ? values[j + 3] : curY + values[j + 3]
+
+          handles.push({ cmdIndex: i, valueIndex: j, x: cp2x, y: cp2y, anchorX: x, anchorY: y, isAbsolute: isAbs })
+          anchors.push({ cmdIndex: i, valueIndex: j + 2, x, y, isAbsolute: isAbs })
+          curX = x
+          curY = y
+        }
+        break
+      }
+      case "Q": {
+        // Q cpx cpy x y
+        for (let j = 0; j < values.length; j += 4) {
+          const cpx = isAbs ? values[j] : curX + values[j]
+          const cpy = isAbs ? values[j + 1] : curY + values[j + 1]
+          const x = isAbs ? values[j + 2] : curX + values[j + 2]
+          const y = isAbs ? values[j + 3] : curY + values[j + 3]
+
+          handles.push({ cmdIndex: i, valueIndex: j, x: cpx, y: cpy, anchorX: curX, anchorY: curY, isAbsolute: isAbs })
+          anchors.push({ cmdIndex: i, valueIndex: j + 2, x, y, isAbsolute: isAbs })
+          curX = x
+          curY = y
+        }
+        break
+      }
+      case "T": {
+        for (let j = 0; j < values.length; j += 2) {
+          const x = isAbs ? values[j] : curX + values[j]
+          const y = isAbs ? values[j + 1] : curY + values[j + 1]
+          anchors.push({ cmdIndex: i, valueIndex: j, x, y, isAbsolute: isAbs })
+          curX = x
+          curY = y
+        }
+        break
+      }
+      case "A": {
+        // A rx ry rotation large-arc-flag sweep-flag x y
+        for (let j = 0; j < values.length; j += 7) {
+          const x = isAbs ? values[j + 5] : curX + values[j + 5]
+          const y = isAbs ? values[j + 6] : curY + values[j + 6]
+          anchors.push({ cmdIndex: i, valueIndex: j + 5, x, y, isAbsolute: isAbs })
+          curX = x
+          curY = y
+        }
+        break
+      }
+      case "Z": {
+        curX = startX
+        curY = startY
+        break
+      }
+    }
+  }
+
+  return { anchors, handles }
+}
+
 export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgContainerRef = useRef<HTMLDivElement>(null)
   const [selectedElement, setSelectedElement] = useState<SVGElement | null>(null)
   const [zoom, setZoom] = useState(100)
   const [isDragging, setIsDragging] = useState(false)
+  const [editMode, setEditMode] = useState<"move" | "points">("move")
   const dragStartRef = useRef<{ x: number; y: number; origTx: number; origTy: number } | null>(null)
+  const pointDragRef = useRef<{
+    type: "anchor" | "handle"
+    cmdIndex: number
+    valueIndex: number
+    isAbsolute: boolean
+    startSvgX: number
+    startSvgY: number
+    origValX: number
+    origValY: number
+    pathElement: SVGPathElement
+    commands: PathPoint[]
+    isHCommand?: boolean
+    isVCommand?: boolean
+  } | null>(null)
   const currentElementRef = useRef<SVGElement | null>(null)
 
   // Parse and render SVG into the container
@@ -26,10 +220,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     if (!svgEl) return
 
-    // Clear previous content
     svgContainerRef.current.innerHTML = ""
 
-    // Clone the SVG into the DOM
     const imported = document.importNode(svgEl, true) as SVGSVGElement
     imported.style.width = "100%"
     imported.style.height = "100%"
@@ -39,84 +231,85 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     svgContainerRef.current.appendChild(imported)
 
-    // Deselect on new SVG
     setSelectedElement(null)
+    setEditMode("move")
   }, [svgCode])
 
-  // Get the current transform translate values for an element
   const getTranslate = (el: SVGElement): { tx: number; ty: number } => {
     const transform = el.getAttribute("transform") || ""
     const match = transform.match(/translate\(\s*([-\d.]+)[,\s]+([-\d.]+)\s*\)/)
-    if (match) {
-      return { tx: parseFloat(match[1]), ty: parseFloat(match[2]) }
-    }
+    if (match) return { tx: parseFloat(match[1]), ty: parseFloat(match[2]) }
     return { tx: 0, ty: 0 }
   }
 
-  // Set translate on an element, preserving other transforms
-  const setTranslate = (el: SVGElement, tx: number, ty: number) => {
+  const setTranslateOnEl = (el: SVGElement, tx: number, ty: number) => {
     let transform = el.getAttribute("transform") || ""
-    const hasTranslate = /translate\([^)]*\)/.test(transform)
-
-    if (hasTranslate) {
+    if (/translate\([^)]*\)/.test(transform)) {
       transform = transform.replace(/translate\([^)]*\)/, `translate(${tx}, ${ty})`)
     } else {
       transform = `translate(${tx}, ${ty}) ${transform}`.trim()
     }
-
     el.setAttribute("transform", transform)
   }
 
-  // Serialize the current SVG back to a string
   const serializeSvg = useCallback(() => {
     const svgEl = svgContainerRef.current?.querySelector("#editable-svg")
     if (!svgEl) return null
-    const serializer = new XMLSerializer()
-    return serializer.serializeToString(svgEl)
+    return new XMLSerializer().serializeToString(svgEl)
   }, [])
 
-  // Get the closest selectable element (direct children of SVG or g at top level)
   const getSelectableElement = (target: EventTarget | null): SVGElement | null => {
     if (!target || !(target instanceof SVGElement)) return null
-
     const svgRoot = svgContainerRef.current?.querySelector("#editable-svg")
     if (!svgRoot) return null
 
-    // Walk up to find a direct child of the root SVG
     let current: SVGElement | null = target
     while (current && current.parentElement !== svgRoot) {
       if (current.parentElement instanceof SVGElement) {
         current = current.parentElement as SVGElement
-      } else {
-        return null
-      }
+      } else return null
     }
 
-    // Skip defs, style, metadata
     if (!current) return null
     const tag = current.tagName.toLowerCase()
-    if (tag === "defs" || tag === "style" || tag === "metadata" || tag === "title" || tag === "desc") {
-      return null
-    }
-
+    if (["defs", "style", "metadata", "title", "desc"].includes(tag)) return null
     return current
   }
 
-  // Handle click to select an element
+  // Double-click to enter point editing mode
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (!selectedElement) return
+    // Check if the selected element is a path or contains paths
+    const pathEl = selectedElement.tagName.toLowerCase() === "path"
+      ? selectedElement
+      : selectedElement.querySelector("path")
+    if (pathEl) {
+      setEditMode("points")
+      e.stopPropagation()
+    }
+  }, [selectedElement])
+
   const handleSvgClick = useCallback(
     (e: React.MouseEvent) => {
+      // If in point edit mode and clicking on the same element, stay
+      if (editMode === "points" && pointDragRef.current) return
+
       const target = getSelectableElement(e.target as EventTarget)
       if (target) {
+        if (target !== selectedElement) {
+          setEditMode("move")
+        }
         setSelectedElement(target)
         e.stopPropagation()
       }
     },
-    [],
+    [editMode, selectedElement],
   )
 
-  // Handle mousedown on SVG to start drag
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      if (editMode === "points") return // Points handle their own drag
+
       const target = getSelectableElement(e.target as EventTarget)
       if (!target) return
 
@@ -126,7 +319,6 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
       if (!svgRoot) return
 
-      // Get mouse position in SVG coordinate space
       const pt = svgRoot.createSVGPoint()
       const ctm = svgRoot.getScreenCTM()
       if (!ctm) return
@@ -136,28 +328,20 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       const svgP = pt.matrixTransform(ctm.inverse())
 
       const { tx, ty } = getTranslate(target)
-
-      dragStartRef.current = {
-        x: svgP.x,
-        y: svgP.y,
-        origTx: tx,
-        origTy: ty,
-      }
-
+      dragStartRef.current = { x: svgP.x, y: svgP.y, origTx: tx, origTy: ty }
       setIsDragging(true)
       e.preventDefault()
       e.stopPropagation()
     },
-    [],
+    [editMode],
   )
 
-  // Handle mousemove during drag
+  // Move drag effect
   useEffect(() => {
-    if (!isDragging) return
+    if (!isDragging || editMode === "points") return
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragStartRef.current || !currentElementRef.current) return
-
       const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
       if (!svgRoot) return
 
@@ -169,217 +353,377 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       pt.y = e.clientY
       const svgP = pt.matrixTransform(ctm.inverse())
 
-      const dx = svgP.x - dragStartRef.current.x
-      const dy = svgP.y - dragStartRef.current.y
-
-      setTranslate(
+      setTranslateOnEl(
         currentElementRef.current,
-        dragStartRef.current.origTx + dx,
-        dragStartRef.current.origTy + dy,
+        dragStartRef.current.origTx + svgP.x - dragStartRef.current.x,
+        dragStartRef.current.origTy + svgP.y - dragStartRef.current.y,
       )
     }
 
     const handleMouseUp = () => {
       setIsDragging(false)
       dragStartRef.current = null
-
-      // Serialize and notify parent of changes
       const newSvg = serializeSvg()
-      if (newSvg) {
-        onSvgChange(newSvg)
-      }
+      if (newSvg) onSvgChange(newSvg)
     }
 
     window.addEventListener("mousemove", handleMouseMove)
     window.addEventListener("mouseup", handleMouseUp)
-
     return () => {
       window.removeEventListener("mousemove", handleMouseMove)
       window.removeEventListener("mouseup", handleMouseUp)
     }
-  }, [isDragging, serializeSvg, onSvgChange])
+  }, [isDragging, editMode, serializeSvg, onSvgChange])
 
-  // Touch support for mobile drag
+  // Point drag handlers
+  const handlePointMouseDown = useCallback((
+    e: React.MouseEvent,
+    type: "anchor" | "handle",
+    cmdIndex: number,
+    valueIndex: number,
+    isAbsolute: boolean,
+    pathElement: SVGPathElement,
+    commands: PathPoint[],
+  ) => {
+    e.stopPropagation()
+    e.preventDefault()
+
+    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
+    if (!svgRoot) return
+
+    const pt = svgRoot.createSVGPoint()
+    const ctm = svgRoot.getScreenCTM()
+    if (!ctm) return
+
+    pt.x = e.clientX
+    pt.y = e.clientY
+    const svgP = pt.matrixTransform(ctm.inverse())
+
+    const cmd = commands[cmdIndex]
+    const cmdType = cmd.type.toUpperCase()
+    const isH = cmdType === "H"
+    const isV = cmdType === "V"
+
+    pointDragRef.current = {
+      type,
+      cmdIndex,
+      valueIndex,
+      isAbsolute,
+      startSvgX: svgP.x,
+      startSvgY: svgP.y,
+      origValX: cmd.values[valueIndex],
+      origValY: isH ? 0 : isV ? cmd.values[valueIndex] : cmd.values[valueIndex + 1],
+      pathElement,
+      commands: JSON.parse(JSON.stringify(commands)),
+      isHCommand: isH,
+      isVCommand: isV,
+    }
+  }, [])
+
+  // Point drag move/up
   useEffect(() => {
-    const container = svgContainerRef.current
-    if (!container) return
+    if (!pointDragRef.current) return
 
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0]
-      const target = getSelectableElement(document.elementFromPoint(touch.clientX, touch.clientY))
-      if (!target) return
+    const handleMouseMove = (e: MouseEvent) => {
+      const ref = pointDragRef.current
+      if (!ref) return
 
-      setSelectedElement(target)
-      currentElementRef.current = target
-
-      const svgRoot = container.querySelector("#editable-svg") as SVGSVGElement
+      const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
       if (!svgRoot) return
 
       const pt = svgRoot.createSVGPoint()
       const ctm = svgRoot.getScreenCTM()
       if (!ctm) return
 
-      pt.x = touch.clientX
-      pt.y = touch.clientY
+      pt.x = e.clientX
+      pt.y = e.clientY
       const svgP = pt.matrixTransform(ctm.inverse())
 
-      const { tx, ty } = getTranslate(target)
-      dragStartRef.current = { x: svgP.x, y: svgP.y, origTx: tx, origTy: ty }
-      setIsDragging(true)
-    }
+      const dx = svgP.x - ref.startSvgX
+      const dy = svgP.y - ref.startSvgY
 
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!dragStartRef.current || !currentElementRef.current) return
-      e.preventDefault()
+      const cmds = ref.commands
+      const cmd = cmds[ref.cmdIndex]
 
-      const touch = e.touches[0]
-      const svgRoot = container.querySelector("#editable-svg") as SVGSVGElement
-      if (!svgRoot) return
-
-      const pt = svgRoot.createSVGPoint()
-      const ctm = svgRoot.getScreenCTM()
-      if (!ctm) return
-
-      pt.x = touch.clientX
-      pt.y = touch.clientY
-      const svgP = pt.matrixTransform(ctm.inverse())
-
-      const dx = svgP.x - dragStartRef.current.x
-      const dy = svgP.y - dragStartRef.current.y
-
-      setTranslate(
-        currentElementRef.current,
-        dragStartRef.current.origTx + dx,
-        dragStartRef.current.origTy + dy,
-      )
-    }
-
-    const handleTouchEnd = () => {
-      if (isDragging) {
-        setIsDragging(false)
-        dragStartRef.current = null
-        const newSvg = serializeSvg()
-        if (newSvg) onSvgChange(newSvg)
+      if (ref.isHCommand) {
+        cmd.values[ref.valueIndex] = ref.origValX + dx
+      } else if (ref.isVCommand) {
+        cmd.values[ref.valueIndex] = ref.origValY + dy
+      } else {
+        cmd.values[ref.valueIndex] = ref.origValX + dx
+        cmd.values[ref.valueIndex + 1] = ref.origValY + dy
       }
+
+      ref.pathElement.setAttribute("d", serializePath(cmds))
     }
 
-    container.addEventListener("touchstart", handleTouchStart, { passive: false })
-    container.addEventListener("touchmove", handleTouchMove, { passive: false })
-    container.addEventListener("touchend", handleTouchEnd)
+    const handleMouseUp = () => {
+      pointDragRef.current = null
+      const newSvg = serializeSvg()
+      if (newSvg) onSvgChange(newSvg)
+      // Force re-render of points overlay
+      setEditMode("points")
+    }
 
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mouseup", handleMouseUp)
     return () => {
-      container.removeEventListener("touchstart", handleTouchStart)
-      container.removeEventListener("touchmove", handleTouchMove)
-      container.removeEventListener("touchend", handleTouchEnd)
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("mouseup", handleMouseUp)
     }
-  }, [isDragging, serializeSvg, onSvgChange])
+  }, [serializeSvg, onSvgChange])
 
-  // Draw selection box around selected element
+  // Draw selection and point overlays
   useEffect(() => {
     const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
     if (!svgRoot) return
 
-    // Remove previous selection indicators
+    // Clean up all overlays
     svgRoot.querySelectorAll(".v0-selection-overlay").forEach((el) => el.remove())
 
     if (!selectedElement || !svgRoot.contains(selectedElement)) return
 
-    const bbox = (selectedElement as SVGGraphicsElement).getBBox?.()
-    if (!bbox) return
-
-    // Get the element's CTM relative to the SVG root
-    const elementCtm = (selectedElement as SVGGraphicsElement).getCTM?.()
-    const svgCtm = svgRoot.getCTM?.()
-    if (!elementCtm || !svgCtm) return
-
-    // Transform bbox corners through element's transform
-    const topLeft = svgRoot.createSVGPoint()
-    topLeft.x = bbox.x
-    topLeft.y = bbox.y
-    const tl = topLeft.matrixTransform(elementCtm).matrixTransform(svgCtm.inverse())
-
-    const topRight = svgRoot.createSVGPoint()
-    topRight.x = bbox.x + bbox.width
-    topRight.y = bbox.y
-    const tr = topRight.matrixTransform(elementCtm).matrixTransform(svgCtm.inverse())
-
-    const bottomLeft = svgRoot.createSVGPoint()
-    bottomLeft.x = bbox.x
-    bottomLeft.y = bbox.y + bbox.height
-    const bl = bottomLeft.matrixTransform(elementCtm).matrixTransform(svgCtm.inverse())
-
-    const bottomRight = svgRoot.createSVGPoint()
-    bottomRight.x = bbox.x + bbox.width
-    bottomRight.y = bbox.y + bbox.height
-    const br = bottomRight.matrixTransform(elementCtm).matrixTransform(svgCtm.inverse())
-
     const ns = "http://www.w3.org/2000/svg"
 
-    // Selection rectangle (outline)
-    const rect = document.createElementNS(ns, "polygon")
-    rect.setAttribute("points", `${tl.x},${tl.y} ${tr.x},${tr.y} ${br.x},${br.y} ${bl.x},${bl.y}`)
-    rect.setAttribute("fill", "none")
-    rect.setAttribute("stroke", "white")
-    rect.setAttribute("stroke-width", "1.5")
-    rect.setAttribute("stroke-dasharray", "4 2")
-    rect.setAttribute("class", "v0-selection-overlay")
-    rect.style.pointerEvents = "none"
-    svgRoot.appendChild(rect)
+    if (editMode === "points") {
+      // Path point editing mode
+      const getAllPaths = (el: SVGElement): SVGPathElement[] => {
+        if (el.tagName.toLowerCase() === "path") return [el as SVGPathElement]
+        return Array.from(el.querySelectorAll("path")) as SVGPathElement[]
+      }
 
-    // Corner handles
-    const corners = [tl, tr, br, bl]
-    for (const corner of corners) {
-      const handle = document.createElementNS(ns, "rect")
-      handle.setAttribute("x", String(corner.x - 3))
-      handle.setAttribute("y", String(corner.y - 3))
-      handle.setAttribute("width", "6")
-      handle.setAttribute("height", "6")
-      handle.setAttribute("fill", "white")
-      handle.setAttribute("stroke", "#333")
-      handle.setAttribute("stroke-width", "0.5")
-      handle.setAttribute("class", "v0-selection-overlay")
-      handle.style.pointerEvents = "none"
-      svgRoot.appendChild(handle)
-    }
+      const paths = getAllPaths(selectedElement)
+      for (const pathEl of paths) {
+        const d = pathEl.getAttribute("d")
+        if (!d) continue
 
-    // Midpoint handles
-    const midpoints = [
-      { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 },
-      { x: (tr.x + br.x) / 2, y: (tr.y + br.y) / 2 },
-      { x: (br.x + bl.x) / 2, y: (br.y + bl.y) / 2 },
-      { x: (bl.x + tl.x) / 2, y: (bl.y + tl.y) / 2 },
-    ]
-    for (const mp of midpoints) {
-      const handle = document.createElementNS(ns, "circle")
-      handle.setAttribute("cx", String(mp.x))
-      handle.setAttribute("cy", String(mp.y))
-      handle.setAttribute("r", "3")
-      handle.setAttribute("fill", "white")
-      handle.setAttribute("stroke", "#333")
-      handle.setAttribute("stroke-width", "0.5")
-      handle.setAttribute("class", "v0-selection-overlay")
-      handle.style.pointerEvents = "none"
-      svgRoot.appendChild(handle)
+        const commands = parsePath(d)
+        const { anchors, handles } = getPointsAndHandles(commands)
+
+        // Get transform from path to SVG root coordinates
+        const pathCtm = (pathEl as SVGGraphicsElement).getCTM?.()
+        const svgCtm = svgRoot.getCTM?.()
+        if (!pathCtm || !svgCtm) continue
+        const toScreen = svgCtm.inverse().multiply(pathCtm)
+
+        const transformPoint = (x: number, y: number) => {
+          const p = svgRoot.createSVGPoint()
+          p.x = x
+          p.y = y
+          const tp = p.matrixTransform(toScreen)
+          return { x: tp.x, y: tp.y }
+        }
+
+        // Draw handle lines (thin lines from anchor to control point)
+        for (const h of handles) {
+          const hp = transformPoint(h.x, h.y)
+          const ap = transformPoint(h.anchorX, h.anchorY)
+
+          const line = document.createElementNS(ns, "line")
+          line.setAttribute("x1", String(ap.x))
+          line.setAttribute("y1", String(ap.y))
+          line.setAttribute("x2", String(hp.x))
+          line.setAttribute("y2", String(hp.y))
+          line.setAttribute("stroke", "#666")
+          line.setAttribute("stroke-width", "0.8")
+          line.setAttribute("class", "v0-selection-overlay")
+          line.style.pointerEvents = "none"
+          svgRoot.appendChild(line)
+        }
+
+        // Draw control handle circles (black filled)
+        for (const h of handles) {
+          const hp = transformPoint(h.x, h.y)
+
+          const circle = document.createElementNS(ns, "circle")
+          circle.setAttribute("cx", String(hp.x))
+          circle.setAttribute("cy", String(hp.y))
+          circle.setAttribute("r", "4")
+          circle.setAttribute("fill", "black")
+          circle.setAttribute("stroke", "#333")
+          circle.setAttribute("stroke-width", "0.5")
+          circle.setAttribute("class", "v0-selection-overlay")
+          circle.style.cursor = "pointer"
+          circle.style.pointerEvents = "all"
+
+          // Drag handler for control handles
+          circle.addEventListener("mousedown", ((handle: typeof h) => (ev: Event) => {
+            const me = ev as MouseEvent
+            me.stopPropagation()
+            me.preventDefault()
+
+            const svgRootEl = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
+            if (!svgRootEl) return
+            const pt2 = svgRootEl.createSVGPoint()
+            const ctm2 = svgRootEl.getScreenCTM()
+            if (!ctm2) return
+            pt2.x = me.clientX
+            pt2.y = me.clientY
+            const svgP2 = pt2.matrixTransform(ctm2.inverse())
+
+            const cmd = commands[handle.cmdIndex]
+            const cmdType = cmd.type.toUpperCase()
+
+            pointDragRef.current = {
+              type: "handle",
+              cmdIndex: handle.cmdIndex,
+              valueIndex: handle.valueIndex,
+              isAbsolute: handle.isAbsolute,
+              startSvgX: svgP2.x,
+              startSvgY: svgP2.y,
+              origValX: cmd.values[handle.valueIndex],
+              origValY: cmdType === "H" ? 0 : cmdType === "V" ? cmd.values[handle.valueIndex] : cmd.values[handle.valueIndex + 1],
+              pathElement: pathEl,
+              commands: JSON.parse(JSON.stringify(commands)),
+              isHCommand: cmdType === "H",
+              isVCommand: cmdType === "V",
+            }
+          })(h))
+
+          svgRoot.appendChild(circle)
+        }
+
+        // Draw anchor points (white squares with dark border)
+        for (const a of anchors) {
+          const ap = transformPoint(a.x, a.y)
+
+          const rect = document.createElementNS(ns, "rect")
+          rect.setAttribute("x", String(ap.x - 4))
+          rect.setAttribute("y", String(ap.y - 4))
+          rect.setAttribute("width", "8")
+          rect.setAttribute("height", "8")
+          rect.setAttribute("fill", "white")
+          rect.setAttribute("stroke", "#333")
+          rect.setAttribute("stroke-width", "1")
+          rect.setAttribute("class", "v0-selection-overlay")
+          rect.style.cursor = "pointer"
+          rect.style.pointerEvents = "all"
+
+          // Drag handler for anchors
+          rect.addEventListener("mousedown", ((anchor: typeof a) => (ev: Event) => {
+            const me = ev as MouseEvent
+            me.stopPropagation()
+            me.preventDefault()
+
+            const svgRootEl = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
+            if (!svgRootEl) return
+            const pt2 = svgRootEl.createSVGPoint()
+            const ctm2 = svgRootEl.getScreenCTM()
+            if (!ctm2) return
+            pt2.x = me.clientX
+            pt2.y = me.clientY
+            const svgP2 = pt2.matrixTransform(ctm2.inverse())
+
+            const cmd = commands[anchor.cmdIndex]
+            const cmdType = cmd.type.toUpperCase()
+
+            pointDragRef.current = {
+              type: "anchor",
+              cmdIndex: anchor.cmdIndex,
+              valueIndex: anchor.valueIndex,
+              isAbsolute: anchor.isAbsolute,
+              startSvgX: svgP2.x,
+              startSvgY: svgP2.y,
+              origValX: cmd.values[anchor.valueIndex],
+              origValY: cmdType === "H" ? 0 : cmdType === "V" ? cmd.values[anchor.valueIndex] : cmd.values[anchor.valueIndex + 1],
+              pathElement: pathEl,
+              commands: JSON.parse(JSON.stringify(commands)),
+              isHCommand: cmdType === "H",
+              isVCommand: cmdType === "V",
+            }
+          })(a))
+
+          svgRoot.appendChild(rect)
+        }
+      }
+    } else {
+      // Bounding box selection mode
+      const bbox = (selectedElement as SVGGraphicsElement).getBBox?.()
+      if (!bbox) return
+
+      const elementCtm = (selectedElement as SVGGraphicsElement).getCTM?.()
+      const svgCtm = svgRoot.getCTM?.()
+      if (!elementCtm || !svgCtm) return
+
+      const transformCorner = (x: number, y: number) => {
+        const p = svgRoot.createSVGPoint()
+        p.x = x
+        p.y = y
+        return p.matrixTransform(elementCtm).matrixTransform(svgCtm.inverse())
+      }
+
+      const tl = transformCorner(bbox.x, bbox.y)
+      const tr = transformCorner(bbox.x + bbox.width, bbox.y)
+      const bl = transformCorner(bbox.x, bbox.y + bbox.height)
+      const br = transformCorner(bbox.x + bbox.width, bbox.y + bbox.height)
+
+      const rect = document.createElementNS(ns, "polygon")
+      rect.setAttribute("points", `${tl.x},${tl.y} ${tr.x},${tr.y} ${br.x},${br.y} ${bl.x},${bl.y}`)
+      rect.setAttribute("fill", "none")
+      rect.setAttribute("stroke", "white")
+      rect.setAttribute("stroke-width", "1.5")
+      rect.setAttribute("stroke-dasharray", "4 2")
+      rect.setAttribute("class", "v0-selection-overlay")
+      rect.style.pointerEvents = "none"
+      svgRoot.appendChild(rect)
+
+      const corners = [tl, tr, br, bl]
+      for (const corner of corners) {
+        const handle = document.createElementNS(ns, "rect")
+        handle.setAttribute("x", String(corner.x - 3))
+        handle.setAttribute("y", String(corner.y - 3))
+        handle.setAttribute("width", "6")
+        handle.setAttribute("height", "6")
+        handle.setAttribute("fill", "white")
+        handle.setAttribute("stroke", "#333")
+        handle.setAttribute("stroke-width", "0.5")
+        handle.setAttribute("class", "v0-selection-overlay")
+        handle.style.pointerEvents = "none"
+        svgRoot.appendChild(handle)
+      }
+
+      const midpoints = [
+        { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 },
+        { x: (tr.x + br.x) / 2, y: (tr.y + br.y) / 2 },
+        { x: (br.x + bl.x) / 2, y: (br.y + bl.y) / 2 },
+        { x: (bl.x + tl.x) / 2, y: (bl.y + tl.y) / 2 },
+      ]
+      for (const mp of midpoints) {
+        const handle = document.createElementNS(ns, "circle")
+        handle.setAttribute("cx", String(mp.x))
+        handle.setAttribute("cy", String(mp.y))
+        handle.setAttribute("r", "3")
+        handle.setAttribute("fill", "white")
+        handle.setAttribute("stroke", "#333")
+        handle.setAttribute("stroke-width", "0.5")
+        handle.setAttribute("class", "v0-selection-overlay")
+        handle.style.pointerEvents = "none"
+        svgRoot.appendChild(handle)
+      }
     }
-  }, [selectedElement, isDragging, svgCode])
+  }, [selectedElement, isDragging, svgCode, editMode, handlePointMouseDown])
 
   // Click outside to deselect
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (e.target === containerRef.current || e.target === svgContainerRef.current) {
       setSelectedElement(null)
+      setEditMode("move")
     }
   }, [])
 
-  // Keyboard: delete selected, escape to deselect
+  // Keyboard handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setSelectedElement(null)
+        if (editMode === "points") {
+          setEditMode("move")
+        } else {
+          setSelectedElement(null)
+        }
       }
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedElement) {
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedElement && editMode === "move") {
         const activeEl = document.activeElement
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
-
         selectedElement.remove()
         setSelectedElement(null)
         const newSvg = serializeSvg()
@@ -389,11 +733,10 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedElement, serializeSvg, onSvgChange])
+  }, [selectedElement, editMode, serializeSvg, onSvgChange])
 
   const handleZoom = (newZoom: number) => {
-    const clamped = Math.max(25, Math.min(400, newZoom))
-    setZoom(clamped)
+    setZoom(Math.max(25, Math.min(400, newZoom)))
   }
 
   return (
@@ -407,7 +750,6 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         <button
           onClick={() => handleZoom(zoom - 25)}
           className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-r border-white/10"
-          title="Zoom out"
         >
           -
         </button>
@@ -415,18 +757,31 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         <button
           onClick={() => handleZoom(zoom + 25)}
           className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
-          title="Zoom in"
         >
           +
         </button>
         <button
           onClick={() => handleZoom(100)}
           className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
-          title="Reset zoom"
         >
           reset
         </button>
       </div>
+
+      {/* Edit mode indicator */}
+      {editMode === "points" && (
+        <div className="absolute top-3 right-3 z-20 bg-black/80 backdrop-blur-sm rounded border border-white/10 text-white text-xs font-mono px-3 py-1.5">
+          Point Editing
+          <span className="text-white/40 ml-2">ESC to exit</span>
+        </div>
+      )}
+
+      {/* Double-click hint */}
+      {selectedElement && editMode === "move" && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-black/70 backdrop-blur-sm rounded border border-white/10 text-white/60 text-[10px] font-mono px-2.5 py-1">
+          Double-click to edit points
+        </div>
+      )}
 
       {/* SVG canvas */}
       <div
@@ -435,10 +790,11 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         style={{
           transform: `scale(${zoom / 100})`,
           transformOrigin: "center center",
-          cursor: isDragging ? "grabbing" : "default",
+          cursor: isDragging ? "grabbing" : editMode === "points" ? "crosshair" : "default",
         }}
         onClick={handleSvgClick}
         onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
       />
     </div>
   )
