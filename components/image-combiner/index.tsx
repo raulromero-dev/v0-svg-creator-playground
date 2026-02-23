@@ -688,7 +688,7 @@ export function ImageCombiner() {
                   </div>
                   <div className="flex flex-col justify-center">
                     <h1 className="text-lg md:text-2xl font-bold text-white select-none leading-none">
-                      SVG Creator
+                      SVG Generator
                     </h1>
                     <p className="text-[9px] md:text-[11px] text-gray-400 select-none tracking-wide mt-0.5 md:mt-1">
                       Powered by{" "}

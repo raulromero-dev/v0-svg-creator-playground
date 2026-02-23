@@ -1,6 +1,6 @@
 {
-  "name": "SVG Creator",
-  "short_name": "SVG Creator",
+  "name": "SVG Generator",
+  "short_name": "SVG Generator",
   "description": "AI-powered text and image to SVG converter",
   "start_url": "/",
   "display": "standalone",
