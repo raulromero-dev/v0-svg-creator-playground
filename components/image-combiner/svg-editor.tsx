@@ -221,7 +221,11 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const serializeSvg = useCallback(() => {
     const svgEl = svgContainerRef.current?.querySelector("#editable-svg")
     if (!svgEl) return null
-    return new XMLSerializer().serializeToString(svgEl)
+    // Clone and strip editor overlays before serializing
+    const clone = svgEl.cloneNode(true) as SVGElement
+    clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay").forEach((el) => el.remove())
+    clone.removeAttribute("id")
+    return new XMLSerializer().serializeToString(clone)
   }, [])
 
   const getSelectableElement = (target: EventTarget | null): SVGElement | null => {
@@ -384,25 +388,83 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       svgRoot.appendChild(outline)
     }
 
-    // --- Path points (shown immediately) ---
-    const getAllPaths = (el: SVGElement): SVGPathElement[] => {
-      if (el.tagName.toLowerCase() === "path") return [el as SVGPathElement]
-      return Array.from(el.querySelectorAll("path")) as SVGPathElement[]
+    // --- Collect all editable child shapes ---
+    const getAllEditableElements = (el: SVGElement): SVGElement[] => {
+      const tag = el.tagName.toLowerCase()
+      const editableTags = ["path", "polygon", "polyline", "rect", "circle", "ellipse", "line"]
+      if (editableTags.includes(tag)) return [el]
+      const result: SVGElement[] = []
+      for (const child of Array.from(el.querySelectorAll(editableTags.join(",")))) {
+        result.push(child as SVGElement)
+      }
+      return result
     }
-    const paths = getAllPaths(selectedElement)
-    if (paths.length === 0) return
 
-    for (let pathIdx = 0; pathIdx < paths.length; pathIdx++) {
-      const pathEl = paths[pathIdx]
-      const d = pathEl.getAttribute("d")
-      if (!d) continue
+    const editableEls = getAllEditableElements(selectedElement)
+    if (editableEls.length === 0) return
 
-      const commands = parsePath(d)
-      const { anchors, handles } = getPointsAndHandles(commands)
+    // Helper to create a draggable anchor point for any shape
+    const createShapeAnchor = (
+      x: number, y: number, transformPt: (x: number, y: number) => { x: number; y: number },
+      onDrag: (dx: number, dy: number, startX: number, startY: number) => void,
+      onDragEnd: () => void,
+    ) => {
+      const tp = transformPt(x, y)
+      const rect = document.createElementNS(ns, "rect")
+      rect.setAttribute("x", String(tp.x - 4))
+      rect.setAttribute("y", String(tp.y - 4))
+      rect.setAttribute("width", "8")
+      rect.setAttribute("height", "8")
+      rect.setAttribute("fill", "white")
+      rect.setAttribute("stroke", "#333")
+      rect.setAttribute("stroke-width", "1")
+      rect.setAttribute("class", "v0-point-overlay")
+      rect.style.cursor = "pointer"
+      rect.style.pointerEvents = "all"
 
-      const pathCtm = (pathEl as SVGGraphicsElement).getCTM?.()
-      if (!pathCtm || !svgCtm) continue
-      const toRoot = svgCtm.inverse().multiply(pathCtm)
+      rect.addEventListener("mousedown", (ev: Event) => {
+        const me = ev as MouseEvent
+        me.stopPropagation()
+        me.preventDefault()
+        const svgR = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
+        if (!svgR) return
+        const pt = svgR.createSVGPoint()
+        const ctm2 = svgR.getScreenCTM()
+        if (!ctm2) return
+        pt.x = me.clientX; pt.y = me.clientY
+        const svgP = pt.matrixTransform(ctm2.inverse())
+        const startSvgX = svgP.x, startSvgY = svgP.y
+
+        const moveHandler = (moveEv: MouseEvent) => {
+          const pt2 = svgR.createSVGPoint()
+          const ctm3 = svgR.getScreenCTM()
+          if (!ctm3) return
+          pt2.x = moveEv.clientX; pt2.y = moveEv.clientY
+          const mvP = pt2.matrixTransform(ctm3.inverse())
+          onDrag(mvP.x - startSvgX, mvP.y - startSvgY, startSvgX, startSvgY)
+        }
+        const upHandler = () => {
+          window.removeEventListener("mousemove", moveHandler)
+          window.removeEventListener("mouseup", upHandler)
+          onDragEnd()
+          const newSvg = serializeSvg()
+          if (newSvg) onSvgChange(newSvg)
+          setOverlayKey((k) => k + 1)
+        }
+        window.addEventListener("mousemove", moveHandler)
+        window.addEventListener("mouseup", upHandler)
+      })
+
+      svgRoot.appendChild(rect)
+    }
+
+    for (let elIdx = 0; elIdx < editableEls.length; elIdx++) {
+      const shapeEl = editableEls[elIdx]
+      const tag = shapeEl.tagName.toLowerCase()
+
+      const elCtm = (shapeEl as SVGGraphicsElement).getCTM?.()
+      if (!elCtm || !svgCtm) continue
+      const toRoot = svgCtm.inverse().multiply(elCtm)
 
       const transformPt = (x: number, y: number) => {
         const p = svgRoot.createSVGPoint()
@@ -410,6 +472,159 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         const tp = p.matrixTransform(toRoot)
         return { x: tp.x, y: tp.y }
       }
+
+      // --- Handle polygon / polyline points ---
+      if (tag === "polygon" || tag === "polyline") {
+        const pointsAttr = shapeEl.getAttribute("points") || ""
+        const coords = pointsAttr.trim().split(/[\s,]+/).map(Number)
+        for (let j = 0; j < coords.length; j += 2) {
+          const origX = coords[j], origY = coords[j + 1]
+          const idx = j
+          createShapeAnchor(origX, origY, transformPt,
+            (dx, dy) => {
+              coords[idx] = origX + dx
+              coords[idx + 1] = origY + dy
+              const newPts = []
+              for (let k = 0; k < coords.length; k += 2) {
+                newPts.push(`${coords[k]},${coords[k + 1]}`)
+              }
+              shapeEl.setAttribute("points", newPts.join(" "))
+            },
+            () => { /* handled by upHandler */ }
+          )
+        }
+        continue
+      }
+
+      // --- Handle rect corners ---
+      if (tag === "rect") {
+        const rx = parseFloat(shapeEl.getAttribute("x") || "0")
+        const ry = parseFloat(shapeEl.getAttribute("y") || "0")
+        const rw = parseFloat(shapeEl.getAttribute("width") || "0")
+        const rh = parseFloat(shapeEl.getAttribute("height") || "0")
+        const corners = [
+          { attr: "tl" }, { attr: "tr" }, { attr: "bl" }, { attr: "br" },
+        ]
+        const getCorner = (c: string) => {
+          const cx = parseFloat(shapeEl.getAttribute("x") || "0")
+          const cy = parseFloat(shapeEl.getAttribute("y") || "0")
+          const cw = parseFloat(shapeEl.getAttribute("width") || "0")
+          const ch = parseFloat(shapeEl.getAttribute("height") || "0")
+          switch (c) {
+            case "tl": return { x: cx, y: cy }
+            case "tr": return { x: cx + cw, y: cy }
+            case "bl": return { x: cx, y: cy + ch }
+            case "br": return { x: cx + cw, y: cy + ch }
+            default: return { x: cx, y: cy }
+          }
+        }
+        for (const corner of corners) {
+          const cp = getCorner(corner.attr)
+          createShapeAnchor(cp.x, cp.y, transformPt,
+            (dx, dy) => {
+              switch (corner.attr) {
+                case "tl":
+                  shapeEl.setAttribute("x", String(rx + dx))
+                  shapeEl.setAttribute("y", String(ry + dy))
+                  shapeEl.setAttribute("width", String(Math.max(1, rw - dx)))
+                  shapeEl.setAttribute("height", String(Math.max(1, rh - dy)))
+                  break
+                case "tr":
+                  shapeEl.setAttribute("y", String(ry + dy))
+                  shapeEl.setAttribute("width", String(Math.max(1, rw + dx)))
+                  shapeEl.setAttribute("height", String(Math.max(1, rh - dy)))
+                  break
+                case "bl":
+                  shapeEl.setAttribute("x", String(rx + dx))
+                  shapeEl.setAttribute("width", String(Math.max(1, rw - dx)))
+                  shapeEl.setAttribute("height", String(Math.max(1, rh + dy)))
+                  break
+                case "br":
+                  shapeEl.setAttribute("width", String(Math.max(1, rw + dx)))
+                  shapeEl.setAttribute("height", String(Math.max(1, rh + dy)))
+                  break
+              }
+            },
+            () => { /* handled by upHandler */ }
+          )
+        }
+        continue
+      }
+
+      // --- Handle circle ---
+      if (tag === "circle") {
+        const ccx = parseFloat(shapeEl.getAttribute("cx") || "0")
+        const ccy = parseFloat(shapeEl.getAttribute("cy") || "0")
+        const cr = parseFloat(shapeEl.getAttribute("r") || "0")
+        // Center point
+        createShapeAnchor(ccx, ccy, transformPt,
+          (dx, dy) => {
+            shapeEl.setAttribute("cx", String(ccx + dx))
+            shapeEl.setAttribute("cy", String(ccy + dy))
+          }, () => {}
+        )
+        // Radius handle (right edge)
+        createShapeAnchor(ccx + cr, ccy, transformPt,
+          (dx) => {
+            shapeEl.setAttribute("r", String(Math.max(1, cr + dx)))
+          }, () => {}
+        )
+        continue
+      }
+
+      // --- Handle ellipse ---
+      if (tag === "ellipse") {
+        const ecx = parseFloat(shapeEl.getAttribute("cx") || "0")
+        const ecy = parseFloat(shapeEl.getAttribute("cy") || "0")
+        const erx = parseFloat(shapeEl.getAttribute("rx") || "0")
+        const ery = parseFloat(shapeEl.getAttribute("ry") || "0")
+        // Center
+        createShapeAnchor(ecx, ecy, transformPt,
+          (dx, dy) => {
+            shapeEl.setAttribute("cx", String(ecx + dx))
+            shapeEl.setAttribute("cy", String(ecy + dy))
+          }, () => {}
+        )
+        // Rx handle
+        createShapeAnchor(ecx + erx, ecy, transformPt,
+          (dx) => { shapeEl.setAttribute("rx", String(Math.max(1, erx + dx))) }, () => {}
+        )
+        // Ry handle
+        createShapeAnchor(ecx, ecy + ery, transformPt,
+          (_, dy) => { shapeEl.setAttribute("ry", String(Math.max(1, ery + dy))) }, () => {}
+        )
+        continue
+      }
+
+      // --- Handle line ---
+      if (tag === "line") {
+        const lx1 = parseFloat(shapeEl.getAttribute("x1") || "0")
+        const ly1 = parseFloat(shapeEl.getAttribute("y1") || "0")
+        const lx2 = parseFloat(shapeEl.getAttribute("x2") || "0")
+        const ly2 = parseFloat(shapeEl.getAttribute("y2") || "0")
+        createShapeAnchor(lx1, ly1, transformPt,
+          (dx, dy) => {
+            shapeEl.setAttribute("x1", String(lx1 + dx))
+            shapeEl.setAttribute("y1", String(ly1 + dy))
+          }, () => {}
+        )
+        createShapeAnchor(lx2, ly2, transformPt,
+          (dx, dy) => {
+            shapeEl.setAttribute("x2", String(lx2 + dx))
+            shapeEl.setAttribute("y2", String(ly2 + dy))
+          }, () => {}
+        )
+        continue
+      }
+
+      // --- Handle path elements (existing logic) ---
+      if (tag !== "path") continue
+      const pathEl = shapeEl as SVGPathElement
+      const d = pathEl.getAttribute("d")
+      if (!d) continue
+
+      const commands = parsePath(d)
+      const { anchors, handles } = getPointsAndHandles(commands)
 
       // --- Handle lines ---
       for (const h of handles) {
@@ -477,7 +692,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
             }
             setPointDragActiveRef.current(true)
           }
-        })(h.cmdIndex, h.valueIndex, h.isAbsolute, pathIdx))
+        })(h.cmdIndex, h.valueIndex, h.isAbsolute, elIdx))
 
         svgRoot.appendChild(circle)
       }
