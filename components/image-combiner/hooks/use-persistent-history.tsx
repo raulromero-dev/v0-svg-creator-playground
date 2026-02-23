@@ -10,7 +10,15 @@ function getLocalGenerations(): Generation[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return []
-    return JSON.parse(stored)
+    const parsed: Generation[] = JSON.parse(stored)
+    // Restore blob URLs for SVG generations (blob URLs don't survive page reloads)
+    return parsed.map((gen) => {
+      if (gen.svgCode && (!gen.imageUrl || gen.imageUrl.startsWith("blob:"))) {
+        const blob = new Blob([gen.svgCode], { type: "image/svg+xml" })
+        return { ...gen, imageUrl: URL.createObjectURL(blob) }
+      }
+      return gen
+    })
   } catch (error) {
     console.error("Error loading generations from localStorage:", error)
     return []

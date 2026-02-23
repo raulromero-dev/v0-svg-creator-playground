@@ -10,6 +10,7 @@ export interface Generation {
   status: "loading" | "complete" | "error"
   progress: number
   imageUrl: string | null
+  svgCode?: string | null
   prompt: string
   error?: string
   timestamp: number

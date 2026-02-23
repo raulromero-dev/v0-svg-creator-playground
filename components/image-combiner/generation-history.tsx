@@ -169,21 +169,32 @@ export function GenerationHistory({
                         )}
                       </button>
                     )}
-                    <Image
-                      src={gen.imageUrl || "/placeholder.svg"}
-                      alt={gen.prompt || "Generated image"}
-                      fill
-                      sizes="(max-width: 768px) 80px, 96px"
-                      className={cn(
-                        "object-cover transition-opacity duration-300",
-                        loadedImages.has(gen.id) ? "opacity-100" : "opacity-0",
-                      )}
-                      onLoad={() => {
-                        setLoadedImages((prev) => new Set(prev).add(gen.id))
-                      }}
-                      unoptimized={gen.imageUrl?.includes("blob:") ?? false}
-                    />
-                    {!loadedImages.has(gen.id) && <div className="absolute inset-0 bg-gray-800 animate-pulse" />}
+                    {gen.svgCode ? (
+                      <iframe
+                        srcDoc={`<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}svg{max-width:100%;max-height:100%;width:100%;height:100%}</style></head><body>${gen.svgCode}</body></html>`}
+                        title={gen.prompt || "Generated SVG"}
+                        sandbox="allow-same-origin"
+                        className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+                      />
+                    ) : (
+                      <>
+                        <Image
+                          src={gen.imageUrl || "/placeholder.svg"}
+                          alt={gen.prompt || "Generated image"}
+                          fill
+                          sizes="(max-width: 768px) 80px, 96px"
+                          className={cn(
+                            "object-cover transition-opacity duration-300",
+                            loadedImages.has(gen.id) ? "opacity-100" : "opacity-0",
+                          )}
+                          onLoad={() => {
+                            setLoadedImages((prev) => new Set(prev).add(gen.id))
+                          }}
+                          unoptimized={gen.imageUrl?.includes("blob:") ?? false}
+                        />
+                        {!loadedImages.has(gen.id) && <div className="absolute inset-0 bg-gray-800 animate-pulse" />}
+                      </>
+                    )}
                   </>
                 )}
               </div>

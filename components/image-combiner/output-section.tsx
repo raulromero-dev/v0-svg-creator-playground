@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ProgressBar } from "./progress-bar"
 import { useMobile } from "@/hooks/use-mobile"
-import type { Generation } from "./hooks/use-image-generation"
+import type { Generation } from "./types"
 import { useEffect } from "react"
 
 interface OutputSectionProps {
@@ -77,8 +77,8 @@ export function OutputSection({
   }, [generations, selectedGenerationId, setSelectedGenerationId])
 
   const generatedImage =
-    selectedGeneration?.status === "complete" && selectedGeneration.imageUrl
-      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt }
+    selectedGeneration?.status === "complete" && (selectedGeneration.imageUrl || selectedGeneration.svgCode)
+      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: selectedGeneration.svgCode }
       : null
 
   const renderButtons = (className?: string) => (
@@ -148,17 +148,30 @@ export function OutputSection({
         ) : generatedImage ? (
           <div className="absolute inset-0 flex flex-col select-none">
             <div className="flex-1 flex items-center justify-center relative group max-w-full max-h-full overflow-hidden">
-              <img
-                src={generatedImage.url || "/placeholder.svg"}
-                alt="Generated"
-                className={cn(
-                  "max-w-full max-h-full transition-all duration-700 ease-out cursor-pointer",
-                  "lg:w-full lg:h-full lg:object-contain",
-                  imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
-                )}
-                onLoad={() => setImageLoaded(true)}
-                onClick={onOpenFullscreen}
-              />
+              {generatedImage.svgCode ? (
+                <iframe
+                  srcDoc={`<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}svg{max-width:100%;max-height:100%;width:auto;height:auto}</style></head><body>${generatedImage.svgCode}</body></html>`}
+                  title="Generated SVG"
+                  sandbox="allow-same-origin"
+                  className={cn(
+                    "w-full h-full border-0 bg-white rounded transition-all duration-700 ease-out cursor-pointer",
+                    "opacity-100 scale-100",
+                  )}
+                  onClick={onOpenFullscreen}
+                />
+              ) : (
+                <img
+                  src={generatedImage.url || "/placeholder.svg"}
+                  alt="Generated"
+                  className={cn(
+                    "max-w-full max-h-full transition-all duration-700 ease-out cursor-pointer",
+                    "lg:w-full lg:h-full lg:object-contain",
+                    imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
+                  )}
+                  onLoad={() => setImageLoaded(true)}
+                  onClick={onOpenFullscreen}
+                />
+              )}
             </div>
           </div>
         ) : (

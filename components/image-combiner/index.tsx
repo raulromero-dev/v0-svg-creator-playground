@@ -103,8 +103,8 @@ export function ImageCombiner() {
   const selectedGeneration = persistedGenerations.find((g) => g.id === selectedGenerationId) || persistedGenerations[0]
   const isLoading = persistedGenerations.some((g) => g.status === "loading")
   const generatedImage =
-    selectedGeneration?.status === "complete" && selectedGeneration.imageUrl
-      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt }
+    selectedGeneration?.status === "complete" && (selectedGeneration.imageUrl || selectedGeneration.svgCode)
+      ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: selectedGeneration.svgCode }
       : null
 
   const hasImages = useUrls ? image1Url || image2Url : image1 || image2
@@ -139,12 +139,12 @@ export function ImageCombiner() {
   // </CHANGE>
 
   const openFullscreen = useCallback(() => {
-    if (generatedImage?.url) {
-      setFullscreenImageUrl(generatedImage.url)
+    if (generatedImage?.svgCode || generatedImage?.url) {
+      setFullscreenImageUrl(generatedImage.svgCode || generatedImage.url || "")
       setShowFullscreen(true)
       document.body.style.overflow = "hidden"
     }
-  }, [generatedImage?.url])
+  }, [generatedImage?.url, generatedImage?.svgCode])
 
   const openImageFullscreen = useCallback((imageUrl: string) => {
     setFullscreenImageUrl(imageUrl)
@@ -161,30 +161,48 @@ export function ImageCombiner() {
   const downloadImage = useCallback(async () => {
     if (!generatedImage) return
     try {
-      const response = await fetch(generatedImage.url)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `svg-creator-${currentMode}-result.svg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      if (generatedImage.svgCode) {
+        const blob = new Blob([generatedImage.svgCode], { type: "image/svg+xml" })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `svg-creator-${currentMode}-result.svg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } else if (generatedImage.url) {
+        const response = await fetch(generatedImage.url)
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `svg-creator-${currentMode}-result.svg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      }
     } catch (error) {
-      console.error("Error downloading image:", error)
-      window.open(generatedImage.url, "_blank")
+      console.error("Error downloading SVG:", error)
     }
   }, [generatedImage, currentMode])
 
   const openImageInNewTab = useCallback(() => {
-    if (!generatedImage?.url) {
-      console.error("No image URL available")
+    if (!generatedImage?.url && !generatedImage?.svgCode) {
+      console.error("No content available")
       return
     }
 
     try {
-      if (generatedImage.url.startsWith("data:")) {
+      if (generatedImage.svgCode) {
+        const blob = new Blob([generatedImage.svgCode], { type: "image/svg+xml" })
+        const blobUrl = URL.createObjectURL(blob)
+        const newWindow = window.open(blobUrl, "_blank", "noopener,noreferrer")
+        if (newWindow) {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+        }
+      } else if (generatedImage.url?.startsWith("data:")) {
         const parts = generatedImage.url.split(",")
         const mime = parts[0].match(/:(.*?);/)?.[1] || "image/png"
         const bstr = atob(parts[1])
@@ -199,18 +217,25 @@ export function ImageCombiner() {
         if (newWindow) {
           setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
         }
-      } else {
+      } else if (generatedImage.url) {
         window.open(generatedImage.url, "_blank", "noopener,noreferrer")
       }
     } catch (error) {
-      console.error("Error opening image:", error)
-      window.open(generatedImage.url, "_blank")
+      console.error("Error opening SVG:", error)
     }
   }, [generatedImage])
 
   const copyImageToClipboard = useCallback(async () => {
     if (!generatedImage) return
     try {
+      // If we have SVG code, copy it as text to clipboard
+      if (generatedImage.svgCode) {
+        await navigator.clipboard.writeText(generatedImage.svgCode)
+        setToast({ message: "SVG code copied to clipboard!", type: "success" })
+        setTimeout(() => setToast(null), 2000)
+        return
+      }
+
       const convertToPngBlob = async (imageUrl: string): Promise<Blob> => {
         return new Promise((resolve, reject) => {
           const img = new Image()
@@ -666,24 +691,23 @@ export function ImageCombiner() {
         <div className="w-full max-w-[98vw] lg:max-w-[96vw] 2xl:max-w-[94vw]">
           <div className="w-full mx-auto select-none">
             <div className="bg-[#111111]/95 border border-[#2A2A2A] shadow-lg flex flex-col rounded-lg overflow-hidden">
-              <div className="bg-black px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex items-start justify-between gap-4 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  {!logoLoaded && <Skeleton className="w-6 h-6 md:w-7 md:h-7 rounded bg-white/20" />}
-                  <img
-                    src="/v0-logo.svg"
-                    alt="v0 logo"
-                    width="28"
-                    height="28"
-                    className={`w-6 h-6 md:w-7 md:h-7 ${logoLoaded ? "block" : "hidden"}`}
-                    onLoad={() => setLogoLoaded(true)}
-                  />
-                  <div>
+              <div className="bg-black px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-5 flex items-center justify-between gap-4 flex-shrink-0">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="flex-shrink-0 overflow-hidden rounded-[6px] md:rounded-[8px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/v0-logo.jpg"
+                      alt="v0 logo"
+                      width={44}
+                      height={44}
+                      className="w-9 h-9 md:w-11 md:h-11 object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center">
                     <h1 className="text-lg md:text-2xl font-bold text-white select-none leading-none">
-                      <div className="md:hidden">SVG</div>
-                      <div className="md:hidden mt-0.5">Creator</div>
-                      <div className="hidden md:block">SVG Creator</div>
+                      SVG Creator
                     </h1>
-                    <p className="text-[9px] md:text-[10px] text-gray-400 select-none tracking-wide mt-0.5 md:mt-1">
+                    <p className="text-[9px] md:text-[11px] text-gray-400 select-none tracking-wide mt-0.5 md:mt-1">
                       Powered by{" "}
                       <a
                         href="https://ai.google.dev/gemini-api"

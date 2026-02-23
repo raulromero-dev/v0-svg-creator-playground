@@ -1,6 +1,6 @@
 "use client"
 
-import type { Generation } from "./hooks/use-image-generation"
+import type { Generation } from "./types"
 
 interface FullscreenViewerProps {
   imageUrl: string
@@ -62,12 +62,22 @@ export function FullscreenViewer({ imageUrl, generations, onClose, onNavigate }:
             </button>
           </>
         )}
-        <img
-          src={imageUrl || "/placeholder.svg"}
-          alt="Fullscreen"
-          className="max-w-full max-h-[90vh] object-contain mx-auto shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        />
+        {imageUrl.trim().startsWith("<svg") ? (
+          <iframe
+            srcDoc={`<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}svg{max-width:100%;max-height:100%;width:auto;height:auto}</style></head><body>${imageUrl}</body></html>`}
+            title="Generated SVG Fullscreen"
+            sandbox="allow-same-origin"
+            className="w-[80vw] h-[85vh] max-w-[80vw] max-h-[85vh] mx-auto shadow-2xl bg-white rounded-lg border-0"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <img
+            src={imageUrl || "/placeholder.svg"}
+            alt="Fullscreen"
+            className="max-w-full max-h-[90vh] object-contain mx-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
       </div>
     </div>
   )

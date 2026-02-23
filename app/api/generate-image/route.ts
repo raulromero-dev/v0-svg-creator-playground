@@ -1,15 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
+import { streamText } from "ai"
 import { createGateway } from "@ai-sdk/gateway"
 
 export const dynamic = "force-dynamic"
+export const maxDuration = 120
 
 const MAX_PROMPT_LENGTH = 5000
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 
 interface GenerateImageResponse {
-  url: string
+  svgCode: string
   prompt: string
   description?: string
 }
@@ -19,6 +20,20 @@ interface ErrorResponse {
   message?: string
   details?: string
 }
+
+const SVG_SYSTEM_PROMPT = `You are an expert SVG graphic designer. Your task is to generate clean, professional SVG code based on user descriptions or reference images.
+
+IMPORTANT RULES:
+- Output ONLY valid SVG code. No markdown, no code fences, no explanations before or after.
+- Start with <svg and end with </svg>
+- Use a viewBox attribute for scalability (e.g., viewBox="0 0 800 600")
+- Use clean, well-structured paths and shapes
+- Prefer simple geometric shapes (rect, circle, ellipse, polygon, path) over complex paths when possible
+- Use descriptive fill colors (hex values)
+- Keep the SVG optimized - no unnecessary attributes or empty groups
+- Make designs visually appealing with good use of color, spacing, and composition
+- Do NOT include any text outside the SVG tags
+- Do NOT wrap in code blocks or markdown`
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +52,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const mode = formData.get("mode") as string
     const prompt = formData.get("prompt") as string
-    const aspectRatio = formData.get("aspectRatio") as string
 
     if (!mode) {
       return NextResponse.json<ErrorResponse>({ error: "Mode is required" }, { status: 400 })
@@ -54,59 +68,67 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const geminiAspectRatioMap: Record<string, string> = {
-      portrait: "9:16",
-      landscape: "16:9",
-      wide: "21:9",
-      "4:3": "4:3",
-      "3:4": "3:4",
-      "3:2": "3:2",
-      "2:3": "2:3",
-      "5:4": "5:4",
-      "4:5": "4:5",
-      square: "1:1",
-    }
-
-    const geminiAspectRatio = geminiAspectRatioMap[aspectRatio] || "1:1"
-
     const gateway = createGateway({
       apiKey: apiKey,
     })
 
-    const model = gateway("google/gemini-3.1-flash")
+    const model = gateway("google/gemini-3.1-pro-preview")
 
     if (mode === "text-to-image") {
-      const imageGenerationPrompt = `Generate a clean, scalable SVG graphic based on this description: ${prompt}. The output should be a professional vector graphic with clean lines, suitable for use as an SVG file. Focus on simplicity, clarity, and vector-friendly design elements.`
+      const svgPrompt = `Generate an SVG graphic based on this description: ${prompt}`
 
-      const result = await generateText({
+      console.log("[v0] === TEXT-TO-SVG REQUEST ===")
+      console.log("[v0] Mode:", mode)
+      console.log("[v0] User prompt:", prompt)
+      console.log("[v0] Full prompt sent to model:", svgPrompt)
+      console.log("[v0] Model:", "google/gemini-3.1-pro-preview")
+      console.log("[v0] System prompt length:", SVG_SYSTEM_PROMPT.length, "chars")
+
+      const result = streamText({
         model,
-        prompt: imageGenerationPrompt,
+        system: SVG_SYSTEM_PROMPT,
+        prompt: svgPrompt,
         providerOptions: {
           google: {
-            responseModalities: ["IMAGE"],
-            imageConfig: {
-              aspectRatio: geminiAspectRatio,
-            },
+            thinking_level: "medium",
           },
         },
       })
 
-      const imageFiles = result.files?.filter((f) => f.mediaType?.startsWith("image/")) || []
+      // Collect the full streamed text
+      let fullText = ""
+      let chunkCount = 0
+      for await (const chunk of result.textStream) {
+        fullText += chunk
+        chunkCount++
+      }
 
-      if (imageFiles.length === 0) {
+      console.log("[v0] === TEXT-TO-SVG RESPONSE ===")
+      console.log("[v0] Total chunks received:", chunkCount)
+      console.log("[v0] Raw response length:", fullText.length, "chars")
+      console.log("[v0] Raw response (first 500 chars):", fullText.substring(0, 500))
+
+      // Extract SVG from response
+      const svgCode = extractSvg(fullText)
+
+      console.log("[v0] SVG extracted:", svgCode ? `Yes (${svgCode.length} chars)` : "No")
+      if (svgCode) {
+        console.log("[v0] SVG preview (first 300 chars):", svgCode.substring(0, 300))
+      } else {
+        console.log("[v0] Full raw response for debugging:", fullText)
+      }
+
+      if (!svgCode) {
         return NextResponse.json<ErrorResponse>(
-          { error: "No image generated", details: "The model did not return any images" },
+          { error: "No SVG generated", details: "The model did not return valid SVG code. Raw response: " + fullText.substring(0, 200) },
           { status: 500 },
         )
       }
 
-      const firstImage = imageFiles[0]
-      const imageUrl = `data:${firstImage.mediaType};base64,${firstImage.base64}`
-
       return NextResponse.json<GenerateImageResponse>({
-        url: imageUrl,
+        svgCode,
         prompt: prompt,
-        description: result.text || "",
+        description: "",
       })
     } else if (mode === "image-editing") {
       const image1 = formData.get("image1") as File
@@ -181,13 +203,22 @@ export async function POST(request: NextRequest) {
       }
 
       const editingPrompt = hasImage2
-        ? `${prompt}. Convert and combine these two images into a clean SVG-style graphic with vector-friendly elements, following the instructions.`
-        : `${prompt}. Convert this image into a clean SVG-style graphic with simplified, vector-friendly elements based on the instructions.`
+        ? `${prompt}. Convert and combine these two images into a clean SVG graphic with vector-friendly elements, following the instructions.`
+        : `${prompt}. Convert this image into a clean SVG graphic with simplified, vector-friendly elements based on the instructions.`
 
       messageParts.push({ type: "text", text: editingPrompt })
 
-      const result = await generateText({
+      console.log("[v0] === IMAGE-TO-SVG REQUEST ===")
+      console.log("[v0] Mode:", mode)
+      console.log("[v0] User prompt:", prompt)
+      console.log("[v0] Editing prompt sent:", editingPrompt)
+      console.log("[v0] Has image1:", !!hasImage1, "Has image2:", !!hasImage2)
+      console.log("[v0] Message parts count:", messageParts.length)
+      console.log("[v0] Model:", "google/gemini-3.1-pro-preview")
+
+      const result = streamText({
         model,
+        system: SVG_SYSTEM_PROMPT,
         messages: [
           {
             role: "user",
@@ -197,30 +228,43 @@ export async function POST(request: NextRequest) {
         ],
         providerOptions: {
           google: {
-            responseModalities: ["IMAGE"],
-            imageConfig: {
-              aspectRatio: geminiAspectRatio,
-            },
+            thinking_level: "medium",
           },
         },
       })
 
-      const imageFiles = result.files?.filter((f) => f.mediaType?.startsWith("image/")) || []
+      // Collect the full streamed text
+      let fullText = ""
+      let chunkCount = 0
+      for await (const chunk of result.textStream) {
+        fullText += chunk
+        chunkCount++
+      }
 
-      if (imageFiles.length === 0) {
+      console.log("[v0] === IMAGE-TO-SVG RESPONSE ===")
+      console.log("[v0] Total chunks received:", chunkCount)
+      console.log("[v0] Raw response length:", fullText.length, "chars")
+      console.log("[v0] Raw response (first 500 chars):", fullText.substring(0, 500))
+
+      // Extract SVG from response
+      const svgCode = extractSvg(fullText)
+
+      console.log("[v0] SVG extracted:", svgCode ? `Yes (${svgCode.length} chars)` : "No")
+      if (!svgCode) {
+        console.log("[v0] Full raw response for debugging:", fullText)
+      }
+
+      if (!svgCode) {
         return NextResponse.json<ErrorResponse>(
-          { error: "No image generated", details: "The model did not return any images" },
+          { error: "No SVG generated", details: "The model did not return valid SVG code. Raw response: " + fullText.substring(0, 200) },
           { status: 500 },
         )
       }
 
-      const firstImage = imageFiles[0]
-      const imageUrl = `data:${firstImage.mediaType};base64,${firstImage.base64}`
-
       return NextResponse.json<GenerateImageResponse>({
-        url: imageUrl,
+        svgCode,
         prompt: editingPrompt,
-        description: result.text || "",
+        description: "",
       })
     } else {
       return NextResponse.json<ErrorResponse>(
@@ -234,10 +278,31 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json<ErrorResponse>(
       {
-        error: "Failed to generate image",
+        error: "Failed to generate SVG",
         details: errorMessage,
       },
       { status: 500 },
     )
   }
+}
+
+function extractSvg(text: string): string | null {
+  // Try to extract SVG from the response text
+  // First, try to find <svg...>...</svg> pattern
+  const svgMatch = text.match(/<svg[\s\S]*?<\/svg>/i)
+  if (svgMatch) {
+    return svgMatch[0]
+  }
+
+  // Try removing markdown code fences if present
+  const codeBlockMatch = text.match(/```(?:svg|xml|html)?\s*\n?([\s\S]*?)```/i)
+  if (codeBlockMatch) {
+    const inner = codeBlockMatch[1].trim()
+    const innerSvgMatch = inner.match(/<svg[\s\S]*?<\/svg>/i)
+    if (innerSvgMatch) {
+      return innerSvgMatch[0]
+    }
+  }
+
+  return null
 }
