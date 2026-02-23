@@ -25,6 +25,7 @@ export function useImageUpload() {
       "image/gif",
       "image/bmp",
       "image/tiff",
+      "image/svg+xml",
     ]
 
     if (supportedTypes.includes(file.type.toLowerCase())) {
@@ -32,7 +33,7 @@ export function useImageUpload() {
     }
 
     const fileName = file.name.toLowerCase()
-    const supportedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".gif", ".bmp", ".tiff"]
+    const supportedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".gif", ".bmp", ".tiff", ".svg"]
     return supportedExtensions.some((ext) => fileName.endsWith(ext))
   }
 
@@ -114,8 +115,36 @@ export function useImageUpload() {
   }
 
   const handleImageUpload = async (file: File, imageNumber: 1 | 2) => {
-    if (!validateImageFormat(file)) {
+    const isSvg =
+      file.type === "image/svg+xml" ||
+      file.name.toLowerCase().endsWith(".svg")
+
+    if (!isSvg && !validateImageFormat(file)) {
       showToast.current?.("Please select a valid image file.", "error")
+      return
+    }
+
+    // For SVG files, skip compression and HEIC conversion -- read directly
+    if (isSvg) {
+      const textReader = new FileReader()
+      textReader.onload = (e) => {
+        const svgText = e.target?.result as string
+        // Create a blob URL so the preview can render it in an iframe
+        const blob = new Blob([svgText], { type: "image/svg+xml" })
+        const blobUrl = URL.createObjectURL(blob)
+
+        if (imageNumber === 1) {
+          setImage1(file)
+          setImage1Preview(blobUrl)
+        } else {
+          setImage2(file)
+          setImage2Preview(blobUrl)
+        }
+      }
+      textReader.onerror = () => {
+        showToast.current?.("Error reading the SVG file. Please try again.", "error")
+      }
+      textReader.readAsText(file)
       return
     }
 
