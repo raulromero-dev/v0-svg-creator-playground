@@ -573,7 +573,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-white rounded relative overflow-hidden"
+      className="w-full h-full bg-black rounded relative overflow-hidden"
       onClick={handleContainerClick}
     >
       {/* Zoom controls */}
