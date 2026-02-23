@@ -788,37 +788,55 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     }
   }, [])
 
-  // Keyboard handling
+  // Keyboard handling -- use refs to avoid stale closures
+  const selectedElementRef = useRef<SVGElement | null>(null)
+  selectedElementRef.current = selectedElement
+  const serializeSvgRef = useRef(serializeSvg)
+  serializeSvgRef.current = serializeSvg
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      console.log("[v0] keydown:", e.key, "meta:", e.metaKey, "ctrl:", e.ctrlKey, "selectedElement:", !!selectedElementRef.current, "undoStack:", undoStackRef.current.length)
+
       if (e.key === "Escape") {
         setSelectedElement(null)
+        return
       }
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedElement) {
-        const activeEl = document.activeElement
-        if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
-        selectedElement.remove()
-        setSelectedElement(null)
-        const newSvg = serializeSvg()
-        if (newSvg) commitChange(newSvg)
-      }
-      // Ctrl+Z / Cmd+Z to undo
+
+      // Ctrl+Z / Cmd+Z to undo -- check this FIRST before delete
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
         const activeEl = document.activeElement
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
+        e.stopPropagation()
+        console.log("[v0] Undo requested, stack length:", undoStackRef.current.length)
         const prev = undoStackRef.current.pop()
         if (prev) {
+          console.log("[v0] Restoring previous SVG state, remaining stack:", undoStackRef.current.length)
           isUndoingRef.current = true
           lastSvgRef.current = prev
           onSvgChange(prev)
           setSelectedElement(null)
+        } else {
+          console.log("[v0] Undo stack is empty, nothing to undo")
         }
+        return
+      }
+
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedElementRef.current) {
+        const activeEl = document.activeElement
+        if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
+        e.preventDefault()
+        console.log("[v0] Deleting selected element")
+        selectedElementRef.current.remove()
+        setSelectedElement(null)
+        const newSvg = serializeSvgRef.current()
+        if (newSvg) commitChangeRef.current(newSvg)
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedElement, serializeSvg, commitChange, onSvgChange])
+  }, [onSvgChange])
 
   const handleZoom = (newZoom: number) => {
     setZoom(Math.max(25, Math.min(400, newZoom)))
