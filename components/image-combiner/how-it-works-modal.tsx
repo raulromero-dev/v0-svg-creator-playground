@@ -87,32 +87,30 @@ export function HowItWorksModal({ open, onOpenChange }: HowItWorksModalProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <h3 className="text-sm font-bold text-white tracking-wide">Setup Required</h3>
+              <h3 className="text-sm font-bold text-white tracking-wide">Try It Yourself</h3>
             </div>
             <ol className="space-y-2 text-xs text-white/50">
               <li className="flex items-start gap-2">
                 <span className="text-white font-bold min-w-[16px]">1.</span>
                 <span>
-                  Get your API key from{" "}
+                  Copy the template from{" "}
                   <a
-                    href="https://vercel.com/ai-gateway"
+                    href="https://v0.dev"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white hover:text-white/70 underline underline-offset-2"
                   >
-                    Vercel AI Gateway
+                    v0.dev
                   </a>
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-white font-bold min-w-[16px]">2.</span>
-                <span>
-                  Add <code className="px-1 py-0.5 bg-white/10 border border-white/10 text-[10px] font-mono text-white/70">AI_GATEWAY_API_KEY</code> as an env variable
-                </span>
+                <span>Deploy to Vercel (no API key needed -- uses Vercel AI Gateway)</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-white font-bold min-w-[16px]">3.</span>
-                <span>Publish or Deploy</span>
+                <span>Start generating SVGs</span>
               </li>
             </ol>
           </div>

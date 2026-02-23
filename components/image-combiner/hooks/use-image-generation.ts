@@ -18,7 +18,6 @@ interface UseImageGenerationProps {
   addGeneration: (generation: Generation) => Promise<void>
   onToast: (message: string, type?: "success" | "error") => void
   onImageUpload: (file: File, imageNumber: 1 | 2) => Promise<void>
-  onApiKeyMissing?: () => void
 }
 
 interface GenerateImageOptions {
@@ -66,7 +65,6 @@ export function useImageGeneration({
   addGeneration,
   onToast,
   onImageUpload,
-  onApiKeyMissing,
 }: UseImageGenerationProps) {
   const [selectedGenerationId, setSelectedGenerationId] = useState<string | null>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -201,14 +199,6 @@ export function useImageGeneration({
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-
-            if (errorData.error === "Configuration error" && errorData.details?.includes("AI_GATEWAY_API_KEY")) {
-              clearInterval(progressInterval)
-              setGenerations((prev) => prev.filter((gen) => gen.id !== generationId))
-              onApiKeyMissing?.()
-              return
-            }
-
             throw new Error(`${errorData.error}${errorData.details ? `: ${errorData.details}` : ""}`)
           }
 
