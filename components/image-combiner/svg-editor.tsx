@@ -747,7 +747,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
             }
             setPointDragActiveRef.current(true)
           }
-        })(a.cmdIndex, a.valueIndex, a.isAbsolute, pathIdx))
+        })(a.cmdIndex, a.valueIndex, a.isAbsolute, elIdx))
 
         svgRoot.appendChild(rect)
       }
