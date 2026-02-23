@@ -20,12 +20,29 @@ interface ErrorResponse {
   details?: string
 }
 
-const SVG_SYSTEM_PROMPT = `You are an expert SVG graphic designer. Your task is to generate clean, professional SVG code based on user descriptions or reference images.
+// Map aspect ratio values to viewBox dimensions
+const ASPECT_RATIO_DIMENSIONS: Record<string, { width: number; height: number }> = {
+  "square": { width: 800, height: 800 },
+  "portrait": { width: 450, height: 800 },
+  "landscape": { width: 800, height: 450 },
+  "wide": { width: 800, height: 343 },
+  "4:3": { width: 800, height: 600 },
+  "3:2": { width: 800, height: 533 },
+  "2:3": { width: 533, height: 800 },
+  "3:4": { width: 600, height: 800 },
+  "5:4": { width: 800, height: 640 },
+  "4:5": { width: 640, height: 800 },
+}
+
+function buildSystemPrompt(aspectRatio: string): string {
+  const dims = ASPECT_RATIO_DIMENSIONS[aspectRatio] || ASPECT_RATIO_DIMENSIONS["square"]
+  return `You are an expert SVG graphic designer. Your task is to generate clean, professional SVG code based on user descriptions or reference images.
 
 IMPORTANT RULES:
 - Output ONLY valid SVG code. No markdown, no code fences, no explanations before or after.
 - Start with <svg and end with </svg>
-- Use a viewBox attribute for scalability (e.g., viewBox="0 0 800 600")
+- You MUST use this exact viewBox: viewBox="0 0 ${dims.width} ${dims.height}" — the aspect ratio is ${aspectRatio} (${dims.width}x${dims.height})
+- Fill the entire viewBox with your design. Do not leave large empty margins.
 - Use clean, well-structured paths and shapes
 - Prefer simple geometric shapes (rect, circle, ellipse, polygon, path) over complex paths when possible
 - Use descriptive fill colors (hex values)
@@ -33,12 +50,16 @@ IMPORTANT RULES:
 - Make designs visually appealing with good use of color, spacing, and composition
 - Do NOT include any text outside the SVG tags
 - Do NOT wrap in code blocks or markdown`
+}
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const mode = formData.get("mode") as string
     const prompt = formData.get("prompt") as string
+    const aspectRatio = (formData.get("aspectRatio") as string) || "square"
+    const systemPrompt = buildSystemPrompt(aspectRatio)
+    const dims = ASPECT_RATIO_DIMENSIONS[aspectRatio] || ASPECT_RATIO_DIMENSIONS["square"]
 
     if (!mode) {
       return NextResponse.json<ErrorResponse>({ error: "Mode is required" }, { status: 400 })
@@ -59,18 +80,18 @@ export async function POST(request: NextRequest) {
     const model = "google/gemini-3.1-pro-preview"
 
     if (mode === "text-to-image") {
-      const svgPrompt = `Generate an SVG graphic based on this description: ${prompt}`
+      const svgPrompt = `Generate an SVG graphic with viewBox="0 0 ${dims.width} ${dims.height}" (aspect ratio: ${aspectRatio}) based on this description: ${prompt}`
 
       console.log("[v0] === TEXT-TO-SVG REQUEST ===")
       console.log("[v0] Mode:", mode)
+      console.log("[v0] Aspect ratio:", aspectRatio, `(${dims.width}x${dims.height})`)
       console.log("[v0] User prompt:", prompt)
       console.log("[v0] Full prompt sent to model:", svgPrompt)
       console.log("[v0] Model:", "google/gemini-3.1-pro-preview")
-      console.log("[v0] System prompt length:", SVG_SYSTEM_PROMPT.length, "chars")
 
       const result = streamText({
         model,
-        system: SVG_SYSTEM_PROMPT,
+        system: systemPrompt,
         prompt: svgPrompt,
         providerOptions: {
           google: {
@@ -207,13 +228,14 @@ export async function POST(request: NextRequest) {
       }
 
       const editingPrompt = hasImage2
-        ? `${prompt}. Convert and combine these two inputs into a clean SVG graphic with vector-friendly elements, following the instructions.`
-        : `${prompt}. Use this input as a reference and generate a new SVG graphic with simplified, vector-friendly elements based on the instructions.`
+        ? `${prompt}. Convert and combine these two inputs into a clean SVG graphic with viewBox="0 0 ${dims.width} ${dims.height}" (aspect ratio: ${aspectRatio}) with vector-friendly elements, following the instructions.`
+        : `${prompt}. Use this input as a reference and generate a new SVG graphic with viewBox="0 0 ${dims.width} ${dims.height}" (aspect ratio: ${aspectRatio}) with simplified, vector-friendly elements based on the instructions.`
 
       messageParts.push({ type: "text", text: editingPrompt })
 
       console.log("[v0] === IMAGE-TO-SVG REQUEST ===")
       console.log("[v0] Mode:", mode)
+      console.log("[v0] Aspect ratio:", aspectRatio, `(${dims.width}x${dims.height})`)
       console.log("[v0] User prompt:", prompt)
       console.log("[v0] Editing prompt sent:", editingPrompt)
       console.log("[v0] Has image1:", !!hasImage1, "Has image2:", !!hasImage2)
@@ -222,7 +244,7 @@ export async function POST(request: NextRequest) {
 
       const result = streamText({
         model,
-        system: SVG_SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: [
           {
             role: "user",
