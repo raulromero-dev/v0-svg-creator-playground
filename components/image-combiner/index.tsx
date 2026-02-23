@@ -16,6 +16,7 @@ import { ToastNotification } from "./toast-notification"
 import { GenerationHistory } from "./generation-history"
 import { GlobalDropZone } from "./global-drop-zone"
 import { FullscreenViewer } from "./fullscreen-viewer"
+import type { Generation } from "./types"
 import { Skeleton } from "@/components/ui/skeleton"
 
 
@@ -23,7 +24,7 @@ const MemoizedDithering = memo(Dithering)
 
 export function ImageCombiner() {
   const isMobile = useMobile()
-  const [prompt, setPrompt] = useState("A minimalist icon of a mountain with a sun, clean lines, suitable for logo design")
+  const [prompt, setPrompt] = useState("A high-angle, architectural perspective of the Golden Gate Bridge tower featuring clean, sharp vector lines and the iconic International Orange steel structure. The central focus is a vertical, multi-tiered Art Deco tower defined by its rectangular openings and repetitive structural bracing. Thick primary suspension cables arch from the top of the tower, connected to the road deck by a series of thin, perfectly vertical tension lines. A diagonal perspective of the bridge deck reveals the truss framework underneath. In the distance, a flat horizon line separates the deep blue water from a minimalist city skyline and a soft, hazy sky. All elements are rendered with flat, distinct colors and clear boundaries suitable for a layered SVG graphic.")
   const [useUrls, setUseUrls] = useState(false)
   const [showFullscreen, setShowFullscreen] = useState(false)
   const [fullscreenImageUrl, setFullscreenImageUrl] = useState("")
@@ -110,6 +111,40 @@ export function ImageCombiner() {
   const hasImages = useUrls ? image1Url || image2Url : image1 || image2
   const currentMode = hasImages ? "image-editing" : "text-to-image"
   const canGenerate = prompt.trim().length > 0 && (currentMode === "text-to-image" || (useUrls ? image1Url : image1))
+
+  // Seed a default generation (golden gate bridge) if history is empty on first load
+  const hasSeededRef = useRef(false)
+  useEffect(() => {
+    if (historyLoading || hasSeededRef.current) return
+    if (persistedGenerations.length > 0) {
+      hasSeededRef.current = true
+      return
+    }
+    hasSeededRef.current = true
+    ;(async () => {
+      try {
+        const res = await fetch("/golden_gate_bridge.svg")
+        const svgCode = await res.text()
+        const svgBlob = new Blob([svgCode], { type: "image/svg+xml" })
+        const imageUrl = URL.createObjectURL(svgBlob)
+        const defaultGen: Generation = {
+          id: `default-${Date.now()}`,
+          status: "complete",
+          progress: 100,
+          imageUrl,
+          svgCode,
+          prompt: "A high-angle, architectural perspective of the Golden Gate Bridge tower featuring clean, sharp vector lines and the iconic International Orange steel structure. The central focus is a vertical, multi-tiered Art Deco tower defined by its rectangular openings and repetitive structural bracing. Thick primary suspension cables arch from the top of the tower, connected to the road deck by a series of thin, perfectly vertical tension lines. A diagonal perspective of the bridge deck reveals the truss framework underneath. In the distance, a flat horizon line separates the deep blue water from a minimalist city skyline and a soft, hazy sky. All elements are rendered with flat, distinct colors and clear boundaries suitable for a layered SVG graphic.",
+          timestamp: Date.now(),
+          aspectRatio: "portrait",
+        }
+        await addGeneration(defaultGen)
+        setSelectedGenerationId(defaultGen.id)
+        setAspectRatio("portrait")
+      } catch (err) {
+        console.error("Failed to load default SVG:", err)
+      }
+    })()
+  }, [historyLoading, persistedGenerations.length, addGeneration, setSelectedGenerationId])
 
   useEffect(() => {
     if (selectedGeneration?.status === "complete" && selectedGeneration?.imageUrl) {

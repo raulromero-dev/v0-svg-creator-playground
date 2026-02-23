@@ -125,13 +125,12 @@ export function HowItWorksModal({ open, onOpenChange }: HowItWorksModalProps) {
             </StepCard>
 
             <StepCard number="02" title="Image to SVG">
-              Upload one or two reference images and describe how to convert them. Drag and drop, paste,
-              or use image URLs for quick input.
+              Write a text prompt or upload a reference. Drag and drop, paste or use image URL for quick input.
             </StepCard>
 
             <StepCard number="03" title="Iterate">
-              Click any element in the generated SVG to select it and drag vector points to reshape it directly.
-              Use "Use as Input" to feed your edited result back for further AI refinement. Undo with Ctrl+Z.
+              Edit the SVG by dragging the components. Click any element to select it and drag vector
+              points to reshape it. Use "Use as Input" to feed your edited result back for further AI refinement.
             </StepCard>
 
             <StepCard number="04" title="Export">

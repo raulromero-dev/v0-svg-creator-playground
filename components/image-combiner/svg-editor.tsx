@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useCallback, useEffect } from "react"
+import { getSelectableElement as getSelectableElementFn } from "./get-selectable-element"
 
 interface SvgEditorProps {
   svgCode: string
@@ -255,19 +256,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   }, [])
 
   const getSelectableElement = (target: EventTarget | null): SVGElement | null => {
-    if (!target || !(target instanceof SVGElement)) return null
-    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg")
-    if (!svgRoot) return null
-    let current: SVGElement | null = target
-    while (current && current.parentElement !== svgRoot) {
-      if (current.parentElement instanceof SVGElement) {
-        current = current.parentElement as SVGElement
-      } else return null
-    }
-    if (!current) return null
-    const tag = current.tagName.toLowerCase()
-    if (["defs", "style", "metadata", "title", "desc"].includes(tag)) return null
-    return current
+    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") ?? null
+    return getSelectableElementFn(target, svgRoot)
   }
 
   // Click to select element
@@ -416,9 +406,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     // --- Collect all editable child shapes ---
     const getAllEditableElements = (el: SVGElement): SVGElement[] => {
-      const tag = el.tagName.toLowerCase()
+      const elTag = el.tagName.toLowerCase()
       const editableTags = ["path", "polygon", "polyline", "rect", "circle", "ellipse", "line"]
-      if (editableTags.includes(tag)) return [el]
+      if (editableTags.includes(elTag)) return [el]
       const result: SVGElement[] = []
       for (const child of Array.from(el.querySelectorAll(editableTags.join(",")))) {
         result.push(child as SVGElement)
@@ -798,8 +788,6 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log("[v0] keydown:", e.key, "keyCode:", e.keyCode, "meta:", e.metaKey, "ctrl:", e.ctrlKey, "undoStack:", undoStackRef.current.length)
-
       if (e.key === "Escape") {
         setSelectedElement(null)
         return
