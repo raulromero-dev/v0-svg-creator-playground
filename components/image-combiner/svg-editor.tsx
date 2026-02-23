@@ -788,23 +788,26 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     }
   }, [])
 
-  // Keyboard handling -- use refs to avoid stale closures
+  // Keyboard handling -- all through refs to avoid stale closures
   const selectedElementRef = useRef<SVGElement | null>(null)
   selectedElementRef.current = selectedElement
   const serializeSvgRef = useRef(serializeSvg)
   serializeSvgRef.current = serializeSvg
+  const onSvgChangeRef = useRef(onSvgChange)
+  onSvgChangeRef.current = onSvgChange
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log("[v0] keydown:", e.key, "meta:", e.metaKey, "ctrl:", e.ctrlKey, "selectedElement:", !!selectedElementRef.current, "undoStack:", undoStackRef.current.length)
+      console.log("[v0] keydown:", e.key, "keyCode:", e.keyCode, "meta:", e.metaKey, "ctrl:", e.ctrlKey, "undoStack:", undoStackRef.current.length)
 
       if (e.key === "Escape") {
         setSelectedElement(null)
         return
       }
 
-      // Ctrl+Z / Cmd+Z to undo -- check this FIRST before delete
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+      // Ctrl+Z / Cmd+Z to undo
+      const isUndo = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey
+      if (isUndo) {
         const activeEl = document.activeElement
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
@@ -812,13 +815,13 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         console.log("[v0] Undo requested, stack length:", undoStackRef.current.length)
         const prev = undoStackRef.current.pop()
         if (prev) {
-          console.log("[v0] Restoring previous SVG state, remaining stack:", undoStackRef.current.length)
+          console.log("[v0] Restoring previous SVG, remaining stack:", undoStackRef.current.length)
           isUndoingRef.current = true
           lastSvgRef.current = prev
-          onSvgChange(prev)
+          onSvgChangeRef.current(prev)
           setSelectedElement(null)
         } else {
-          console.log("[v0] Undo stack is empty, nothing to undo")
+          console.log("[v0] Undo stack empty")
         }
         return
       }
@@ -834,9 +837,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         if (newSvg) commitChangeRef.current(newSvg)
       }
     }
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [onSvgChange])
+    window.addEventListener("keydown", handleKeyDown, true)
+    return () => window.removeEventListener("keydown", handleKeyDown, true)
+  }, [])
 
   const handleZoom = (newZoom: number) => {
     setZoom(Math.max(25, Math.min(400, newZoom)))
