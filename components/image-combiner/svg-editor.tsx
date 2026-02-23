@@ -182,6 +182,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const undoStackRef = useRef<string[]>([])
   const MAX_UNDO = 50
   const lastSvgRef = useRef<string>(svgCode)
+  const isUndoingRef = useRef(false)
 
   // Wrap onSvgChange to capture previous state for undo
   const commitChange = useCallback((newSvg: string) => {
@@ -194,7 +195,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     onSvgChange(newSvg)
   }, [onSvgChange])
 
-  // Stable ref to setPointDragActive so native DOM listeners can call it
+  // Stable refs so native DOM listeners always get current versions
+  const commitChangeRef = useRef(commitChange)
+  commitChangeRef.current = commitChange
   const setPointDragActiveRef = useRef(setPointDragActive)
   setPointDragActiveRef.current = setPointDragActive
 
@@ -217,7 +220,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     setSelectedElement(null)
     lastSvgRef.current = svgCode
-    undoStackRef.current = []
+    // Only clear undo stack for truly new SVGs (new generation), not undo/redo
+    if (isUndoingRef.current) {
+      isUndoingRef.current = false
+    } else {
+      undoStackRef.current = []
+    }
   }, [svgCode])
 
   const getTranslate = (el: SVGElement): { tx: number; ty: number } => {
@@ -466,7 +474,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           window.removeEventListener("mouseup", upHandler)
           onDragEnd()
           const newSvg = serializeSvg()
-          if (newSvg) commitChange(newSvg)
+          if (newSvg) commitChangeRef.current(newSvg)
           setOverlayKey((k) => k + 1)
         }
         window.addEventListener("mousemove", moveHandler)
@@ -801,6 +809,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         e.preventDefault()
         const prev = undoStackRef.current.pop()
         if (prev) {
+          isUndoingRef.current = true
           lastSvgRef.current = prev
           onSvgChange(prev)
           setSelectedElement(null)
