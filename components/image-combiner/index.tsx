@@ -17,7 +17,7 @@ import { GenerationHistory } from "./generation-history"
 import { GlobalDropZone } from "./global-drop-zone"
 import { FullscreenViewer } from "./fullscreen-viewer"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ApiKeyWarning } from "@/components/api-key-warning"
+
 
 const MemoizedDithering = memo(Dithering)
 
@@ -33,7 +33,7 @@ export function ImageCombiner() {
   const [dropZoneHover, setDropZoneHover] = useState<1 | 2 | null>(null)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [logoLoaded, setLogoLoaded] = useState(false)
-  const [apiKeyMissing, setApiKeyMissing] = useState(false)
+
 
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
@@ -96,8 +96,6 @@ export function ImageCombiner() {
     addGeneration,
     onToast: showToast,
     onImageUpload: handleImageUpload,
-    onOutOfCredits: () => {},
-    onApiKeyMissing: () => setApiKeyMissing(true),
   })
 
   const selectedGeneration = persistedGenerations.find((g) => g.id === selectedGenerationId) || persistedGenerations[0]
@@ -121,22 +119,7 @@ export function ImageCombiner() {
     uploadShowToast.current = showToast
   }, [uploadShowToast])
 
-  useEffect(() => {
-    const checkApiKey = async () => {
-      try {
-        const response = await fetch("/api/check-api-key")
-        const data = await response.json()
-        if (!data.configured) {
-          setApiKeyMissing(true)
-        }
-      } catch (error) {
-        console.error("Error checking API key:", error)
-      }
-    }
 
-    checkApiKey()
-  }, [])
-  // </CHANGE>
 
   const openFullscreen = useCallback(() => {
     if (generatedImage?.svgCode || generatedImage?.url) {
@@ -723,7 +706,7 @@ export function ImageCombiner() {
               </div>
               <div className="px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col bg-[#111111]">
 
-                {apiKeyMissing && <ApiKeyWarning />}
+        
 
                 <div className="flex flex-col gap-4 xl:gap-0">
                 <div

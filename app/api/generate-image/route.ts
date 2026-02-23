@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { streamText } from "ai"
-import { createGateway } from "@ai-sdk/gateway"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -37,18 +36,6 @@ IMPORTANT RULES:
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.AI_GATEWAY_API_KEY
-
-    if (!apiKey) {
-      return NextResponse.json<ErrorResponse>(
-        {
-          error: "Configuration error",
-          details: "No AI Gateway API key configured. Please add AI_GATEWAY_API_KEY to environment variables.",
-        },
-        { status: 500 },
-      )
-    }
-
     const formData = await request.formData()
     const mode = formData.get("mode") as string
     const prompt = formData.get("prompt") as string
@@ -68,11 +55,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const gateway = createGateway({
-      apiKey: apiKey,
-    })
-
-    const model = gateway("google/gemini-3.1-pro-preview")
+    // Uses Vercel AI Gateway -- zero-config, no API key needed
+    const model = "google/gemini-3.1-pro-preview"
 
     if (mode === "text-to-image") {
       const svgPrompt = `Generate an SVG graphic based on this description: ${prompt}`
