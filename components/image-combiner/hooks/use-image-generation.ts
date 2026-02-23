@@ -278,26 +278,43 @@ export function useImageGeneration({
   }
 
   const loadGeneratedAsInput = async () => {
+    console.log("[v0] loadGeneratedAsInput called")
+    console.log("[v0] selectedGenerationId:", selectedGenerationId)
+    console.log("[v0] generations count:", generations.length)
+    console.log("[v0] generation ids:", generations.map(g => g.id))
+    
     const selectedGeneration = generations.find((g) => g.id === selectedGenerationId)
-    if (!selectedGeneration?.imageUrl && !selectedGeneration?.svgCode) return
+    console.log("[v0] selectedGeneration found:", !!selectedGeneration)
+    console.log("[v0] selectedGeneration status:", selectedGeneration?.status)
+    console.log("[v0] selectedGeneration has svgCode:", !!selectedGeneration?.svgCode)
+    console.log("[v0] selectedGeneration has imageUrl:", !!selectedGeneration?.imageUrl)
+    
+    if (!selectedGeneration?.imageUrl && !selectedGeneration?.svgCode) {
+      console.log("[v0] No imageUrl or svgCode found, returning early")
+      return
+    }
 
     try {
       let file: File
 
       if (selectedGeneration.svgCode) {
         // For SVG generations, create an SVG file directly from the code
+        console.log("[v0] Creating SVG file from svgCode, length:", selectedGeneration.svgCode.length)
         const svgBlob = new Blob([selectedGeneration.svgCode], { type: "image/svg+xml" })
         file = new File([svgBlob], "generated-svg.svg", { type: "image/svg+xml" })
       } else {
+        console.log("[v0] Fetching image from URL:", selectedGeneration.imageUrl)
         const response = await fetch(selectedGeneration.imageUrl!)
         const blob = await response.blob()
         file = new File([blob], "generated-image.png", { type: "image/png" })
       }
 
+      console.log("[v0] Calling onImageUpload with file:", file.name, file.type, file.size)
       await onImageUpload(file, 1)
+      console.log("[v0] onImageUpload completed successfully")
       onToast("SVG loaded into Input 1", "success")
     } catch (error) {
-      console.error("Error loading image as input:", error)
+      console.error("[v0] Error loading image as input:", error)
       onToast("Error loading image", "error")
     }
   }

@@ -126,12 +126,12 @@ export function useImageUpload() {
 
     // For SVG files, skip compression and HEIC conversion -- read directly
     if (isSvg) {
-      const textReader = new FileReader()
-      textReader.onload = (e) => {
-        const svgText = e.target?.result as string
-        // Create a blob URL so the preview can render it in an iframe
+      try {
+        const svgText = await file.text()
         const blob = new Blob([svgText], { type: "image/svg+xml" })
         const blobUrl = URL.createObjectURL(blob)
+
+        console.log("[v0] SVG upload: setting preview for slot", imageNumber, "blobUrl:", blobUrl)
 
         if (imageNumber === 1) {
           setImage1(file)
@@ -140,11 +140,9 @@ export function useImageUpload() {
           setImage2(file)
           setImage2Preview(blobUrl)
         }
-      }
-      textReader.onerror = () => {
+      } catch {
         showToast.current?.("Error reading the SVG file. Please try again.", "error")
       }
-      textReader.readAsText(file)
       return
     }
 
