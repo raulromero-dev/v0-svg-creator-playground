@@ -6,7 +6,7 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "SVG Creator - Text & Image to SVG with Gemini 3.1",
+  title: "SVG Generator - Text & Image to SVG with Gemini 3.1",
   description:
     "Transform your text descriptions and images into high-quality SVG files using Google's Gemini 3.1 AI. Create, edit, and export scalable vector graphics instantly.",
   keywords: [
@@ -33,26 +33,26 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://svg-creator.vercel.app",
-    title: "SVG Creator - Text & Image to SVG with Gemini 3.1",
+    title: "SVG Generator - Text & Image to SVG with Gemini 3.1",
     description:
       "Transform your text descriptions and images into high-quality SVG files using Google's Gemini 3.1 AI.",
-    siteName: "SVG Creator",
+    siteName: "SVG Generator",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "SVG Creator - AI-Powered Vector Graphics",
+        alt: "SVG Generator - AI-Powered Vector Graphics",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SVG Creator - Text & Image to SVG with Gemini 3.1",
+    title: "SVG Generator - Text & Image to SVG with Gemini 3.1",
     description:
       "Transform your text descriptions and images into high-quality SVG files using Google's Gemini 3.1 AI.",
     creator: "@vercel",
-    images: ["/og-image.jpg"],
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,

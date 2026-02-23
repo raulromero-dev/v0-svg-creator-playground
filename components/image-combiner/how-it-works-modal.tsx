@@ -73,7 +73,7 @@ export function HowItWorksModal({ open, onOpenChange }: HowItWorksModalProps) {
               How it works
             </DialogTitle>
             <p className="text-xs text-white/30 mt-1 tracking-wide uppercase">
-              SVG Creator Playground
+              SVG Generator Playground
             </p>
           </DialogHeader>
         </div>
