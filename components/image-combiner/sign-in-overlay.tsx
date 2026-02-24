@@ -30,7 +30,7 @@ export function SignInOverlay({ onClose }: SignInOverlayProps) {
           className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-white text-black text-sm font-medium rounded-md hover:bg-white/90 transition-colors"
         >
           <VercelLogo className="w-3.5 h-3.5" />
-          Sign in with Vercel
+          Sign in
         </a>
         <button
           onClick={onClose}
