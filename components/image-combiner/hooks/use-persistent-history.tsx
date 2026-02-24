@@ -105,11 +105,13 @@ export function usePersistentHistory(onToast?: (message: string, type: "success"
   const clearHistory = async () => {
     clearLocalGenerations()
     setGenerations([])
+    try { localStorage.setItem("v0_seed_dismissed", "1") } catch {}
   }
 
   const deleteGeneration = async (id: string) => {
     setGenerations((prev) => prev.filter((g) => g.id !== id))
     deleteLocalGeneration(id)
+    try { localStorage.setItem("v0_seed_dismissed", "1") } catch {}
   }
 
   return {

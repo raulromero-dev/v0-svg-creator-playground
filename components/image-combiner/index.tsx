@@ -168,6 +168,8 @@ export function ImageCombiner() {
       hasSeededRef.current = true
       return
     }
+    // Don't re-seed if the user previously cleared all history
+    try { if (localStorage.getItem("v0_seed_dismissed")) { hasSeededRef.current = true; return } } catch {}
     hasSeededRef.current = true
     ;(async () => {
       try {
