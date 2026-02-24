@@ -134,9 +134,9 @@ export function useImageGeneration({
       }
 
       // --- Hybrid progress: Phase 1 (thinking) + Phase 2 (streaming) ---
-      const PHASE1_MAX = 55 // synthetic ceiling while model is thinking
-      const PHASE1_DURATION = 210_000 // reach ~55% over 210 seconds
-      const PHASE2_MIN = 55 // streaming band starts here
+      const PHASE1_MAX = 65 // synthetic ceiling while model is thinking
+      const PHASE1_DURATION = 210_000 // reach ~65% over 210 seconds
+      const PHASE2_MIN = 65 // streaming band starts here
       const PHASE2_MAX = 95 // streaming band ends here (100% on complete)
       const ESTIMATED_SVG_SIZE = 6000
 
