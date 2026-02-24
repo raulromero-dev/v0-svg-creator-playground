@@ -65,6 +65,7 @@ export function ImageCombiner() {
     handleImageUpload,
     handleUrlChange,
     clearImage,
+    restorePreview,
     showToast: uploadShowToast,
   } = useImageUpload()
 
@@ -117,6 +118,39 @@ export function ImageCombiner() {
   const currentMode = hasImages ? "image-editing" : "text-to-image"
   const canGenerate = prompt.trim().length > 0 && (currentMode === "text-to-image" || (useUrls ? image1Url : image1))
 
+  // Save user input to sessionStorage before OAuth redirect
+  const saveStateBeforeSignIn = useCallback(() => {
+    try {
+      sessionStorage.setItem("v0_pending_input", JSON.stringify({
+        prompt,
+        aspectRatio,
+        image1Url: image1Url || "",
+        image2Url: image2Url || "",
+        image1Preview: image1Preview || "",
+        image2Preview: image2Preview || "",
+        useUrls,
+      }))
+    } catch {}
+  }, [prompt, aspectRatio, image1Url, image2Url, image1Preview, image2Preview, useUrls])
+
+  // Restore user input from sessionStorage after OAuth redirect
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("v0_pending_input")
+      if (!saved || !user) return
+      const data = JSON.parse(saved)
+      if (data.prompt) setPrompt(data.prompt)
+      if (data.aspectRatio) setAspectRatio(data.aspectRatio)
+      if (data.useUrls) setUseUrls(data.useUrls)
+      if (data.image1Url) handleUrlChange(data.image1Url, 1)
+      if (data.image2Url) handleUrlChange(data.image2Url, 2)
+      // Restore uploaded image previews (data URLs survive sessionStorage)
+      if (data.image1Preview && !data.image1Url) restorePreview(data.image1Preview, 1)
+      if (data.image2Preview && !data.image2Url) restorePreview(data.image2Preview, 2)
+      sessionStorage.removeItem("v0_pending_input")
+    } catch {}
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Gate generation on authentication
   const gatedRunGeneration = useCallback(() => {
     if (!user) {
@@ -134,6 +168,8 @@ export function ImageCombiner() {
       hasSeededRef.current = true
       return
     }
+    // Don't re-seed if the user previously cleared all history
+    try { if (localStorage.getItem("v0_seed_dismissed")) { hasSeededRef.current = true; return } } catch {}
     hasSeededRef.current = true
     ;(async () => {
       try {
@@ -928,7 +964,7 @@ export function ImageCombiner() {
         />
       )}
 
-      {showSignIn && <SignInOverlay onClose={() => setShowSignIn(false)} />}
+      {showSignIn && <SignInOverlay onClose={() => setShowSignIn(false)} onBeforeSignIn={saveStateBeforeSignIn} />}
     </div>
   )
 }

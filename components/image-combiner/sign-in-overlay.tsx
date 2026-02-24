@@ -10,9 +10,10 @@ function VercelLogo({ className }: { className?: string }) {
 
 interface SignInOverlayProps {
   onClose: () => void
+  onBeforeSignIn?: () => void
 }
 
-export function SignInOverlay({ onClose }: SignInOverlayProps) {
+export function SignInOverlay({ onClose, onBeforeSignIn }: SignInOverlayProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="bg-[#111111] border border-[#333333] rounded-lg p-6 max-w-sm w-full mx-4 text-center">
@@ -27,6 +28,7 @@ export function SignInOverlay({ onClose }: SignInOverlayProps) {
         </p>
         <a
           href="/api/auth/authorize"
+          onClick={() => onBeforeSignIn?.()}
           className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-white text-black text-sm font-medium rounded-md hover:bg-white/90 transition-colors"
         >
           <VercelLogo className="w-3.5 h-3.5" />
