@@ -201,6 +201,14 @@ export function useImageUpload() {
     }
   }
 
+  const restorePreview = (preview: string, imageNumber: 1 | 2) => {
+    if (imageNumber === 1) {
+      setImage1Preview(preview)
+    } else {
+      setImage2Preview(preview)
+    }
+  }
+
   const clearImage = (imageNumber: 1 | 2) => {
     if (imageNumber === 1) {
       setImage1(null)
@@ -225,6 +233,7 @@ export function useImageUpload() {
     handleImageUpload,
     handleUrlChange,
     clearImage,
+    restorePreview,
     showToast,
   }
 }

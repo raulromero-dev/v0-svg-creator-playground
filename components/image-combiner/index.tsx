@@ -65,6 +65,7 @@ export function ImageCombiner() {
     handleImageUpload,
     handleUrlChange,
     clearImage,
+    restorePreview,
     showToast: uploadShowToast,
   } = useImageUpload()
 
@@ -125,10 +126,12 @@ export function ImageCombiner() {
         aspectRatio,
         image1Url: image1Url || "",
         image2Url: image2Url || "",
+        image1Preview: image1Preview || "",
+        image2Preview: image2Preview || "",
         useUrls,
       }))
     } catch {}
-  }, [prompt, aspectRatio, image1Url, image2Url, useUrls])
+  }, [prompt, aspectRatio, image1Url, image2Url, image1Preview, image2Preview, useUrls])
 
   // Restore user input from sessionStorage after OAuth redirect
   useEffect(() => {
@@ -138,9 +141,12 @@ export function ImageCombiner() {
       const data = JSON.parse(saved)
       if (data.prompt) setPrompt(data.prompt)
       if (data.aspectRatio) setAspectRatio(data.aspectRatio)
+      if (data.useUrls) setUseUrls(data.useUrls)
       if (data.image1Url) handleUrlChange(data.image1Url, 1)
       if (data.image2Url) handleUrlChange(data.image2Url, 2)
-      if (data.useUrls) setUseUrls(data.useUrls)
+      // Restore uploaded image previews (data URLs survive sessionStorage)
+      if (data.image1Preview && !data.image1Url) restorePreview(data.image1Preview, 1)
+      if (data.image2Preview && !data.image2Url) restorePreview(data.image2Preview, 2)
       sessionStorage.removeItem("v0_pending_input")
     } catch {}
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
