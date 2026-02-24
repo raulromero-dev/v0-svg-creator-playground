@@ -162,6 +162,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const [selectedElement, setSelectedElement] = useState<SVGElement | null>(null)
   const [zoom, setZoom] = useState(100)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+  const [checkerboard, setCheckerboard] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pointDragActive, setPointDragActive] = useState(false)
   const [overlayKey, setOverlayKey] = useState(0) // bump to force overlay redraw
@@ -868,7 +869,13 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-white rounded relative overflow-hidden flex flex-col"
+      className={`w-full h-full rounded relative overflow-hidden flex flex-col ${checkerboard ? "" : "bg-white"}`}
+      style={checkerboard ? {
+        backgroundImage: "linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%)",
+        backgroundSize: "20px 20px",
+        backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+        backgroundColor: "#ffffff",
+      } : undefined}
       onClick={handleContainerClick}
     >
       {/* SVG canvas */}
@@ -907,6 +914,18 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
             className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
           >
             reset
+          </button>
+          <button
+            onClick={() => setCheckerboard((prev) => !prev)}
+            className={`px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10 ${checkerboard ? "bg-white/15" : ""}`}
+            title={checkerboard ? "Switch to white background" : "Switch to checkerboard background"}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="7" height="7" fill="currentColor" fillOpacity={checkerboard ? "1" : "0.4"} />
+              <rect x="7" y="7" width="7" height="7" fill="currentColor" fillOpacity={checkerboard ? "1" : "0.4"} />
+              <rect x="7" y="0" width="7" height="7" fill="currentColor" fillOpacity="0.15" />
+              <rect x="0" y="7" width="7" height="7" fill="currentColor" fillOpacity="0.15" />
+            </svg>
           </button>
         </div>
       </div>
