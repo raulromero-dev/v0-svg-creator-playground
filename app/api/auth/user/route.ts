@@ -74,6 +74,8 @@ export async function GET() {
     let teamSlug: string | null = null
     if (profileResult.ok) {
       const profileData = await profileResult.json()
+      console.log("[v0] /v2/user response keys:", Object.keys(profileData.user || {}))
+      console.log("[v0] defaultTeamId:", profileData.user?.defaultTeamId, "username:", profileData.user?.username, "id:", profileData.user?.id)
       teamId = profileData.user?.defaultTeamId || profileData.user?.id || null
 
       // Fetch team slug for building dashboard URLs
@@ -82,12 +84,17 @@ export async function GET() {
           const teamResult = await fetch(`https://api.vercel.com/v2/teams/${teamId}`, {
             headers: { Authorization: `Bearer ${token}` },
           })
+          console.log("[v0] /v2/teams/${teamId} status:", teamResult.status)
           if (teamResult.ok) {
             const teamData = await teamResult.json()
+            console.log("[v0] team data keys:", Object.keys(teamData), "slug:", teamData.slug, "name:", teamData.name)
             teamSlug = teamData.slug || null
+          } else {
+            const errText = await teamResult.text()
+            console.log("[v0] team fetch error:", errText)
           }
-        } catch {
-          // Fallback: no slug available
+        } catch (err) {
+          console.log("[v0] team fetch exception:", err)
         }
       }
     }
