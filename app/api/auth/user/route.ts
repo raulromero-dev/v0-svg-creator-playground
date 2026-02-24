@@ -71,9 +71,25 @@ export async function GET() {
     })
 
     let teamId: string | null = null
+    let teamSlug: string | null = null
     if (profileResult.ok) {
       const profileData = await profileResult.json()
       teamId = profileData.user?.defaultTeamId || profileData.user?.id || null
+
+      // Fetch team slug for building dashboard URLs
+      if (teamId) {
+        try {
+          const teamResult = await fetch(`https://api.vercel.com/v2/teams/${teamId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (teamResult.ok) {
+            const teamData = await teamResult.json()
+            teamSlug = teamData.slug || null
+          }
+        } catch {
+          // Fallback: no slug available
+        }
+      }
     }
 
     // Exchange for AI Gateway key if we don't have one yet
@@ -112,6 +128,7 @@ export async function GET() {
         username: userInfo.preferred_username,
         picture: userInfo.picture,
         teamId,
+        teamSlug,
         balance,
       },
     })

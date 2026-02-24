@@ -8,7 +8,7 @@ interface NoCreditsOverlayProps {
 }
 
 export function NoCreditsOverlay({ onClose }: NoCreditsOverlayProps) {
-  const { refreshBalance, balance } = useAuth()
+  const { user, refreshBalance, balance } = useAuth()
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const handleRefresh = async () => {
@@ -39,7 +39,7 @@ export function NoCreditsOverlay({ onClose }: NoCreditsOverlayProps) {
           Your AI Gateway balance is $0. Add credits to your Vercel account to continue generating SVGs.
         </p>
         <a
-          href="https://vercel.com/~/ai-gateway"
+          href={user?.teamSlug ? `https://vercel.com/${user.teamSlug}/~/ai-gateway` : "https://vercel.com/~/ai-gateway"}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-white text-black text-sm font-medium rounded-md hover:bg-white/90 transition-colors"

@@ -8,6 +8,7 @@ interface User {
   username: string
   picture: string
   teamId: string | null
+  teamSlug: string | null
   balance: string | null
 }
 
