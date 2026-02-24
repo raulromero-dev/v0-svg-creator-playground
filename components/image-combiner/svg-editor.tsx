@@ -292,6 +292,34 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     // Strip editor-specific inline styles and always enforce overflow="hidden"
     clone.removeAttribute("style")
     clone.setAttribute("overflow", "hidden")
+
+    // Add a hard clipPath matching the viewBox so overflow is physically clipped in all viewers
+    const vb = clone.viewBox?.baseVal
+    if (vb && (vb.width > 0 || vb.height > 0)) {
+      // Remove any previous export clipPath
+      clone.querySelector("#v0-export-clip")?.remove()
+      const ns = "http://www.w3.org/2000/svg"
+      const defs = clone.querySelector("defs") || clone.insertBefore(document.createElementNS(ns, "defs"), clone.firstChild)
+      const clipPath = document.createElementNS(ns, "clipPath")
+      clipPath.setAttribute("id", "v0-export-clip")
+      const clipRect = document.createElementNS(ns, "rect")
+      clipRect.setAttribute("x", String(vb.x))
+      clipRect.setAttribute("y", String(vb.y))
+      clipRect.setAttribute("width", String(vb.width))
+      clipRect.setAttribute("height", String(vb.height))
+      clipPath.appendChild(clipRect)
+      defs.appendChild(clipPath)
+
+      // Wrap all non-defs content in a clipped group
+      const wrapper = document.createElementNS(ns, "g")
+      wrapper.setAttribute("clip-path", "url(#v0-export-clip)")
+      const children = Array.from(clone.childNodes).filter(
+        (n) => n !== defs && !(n instanceof Element && n.tagName === "defs")
+      )
+      children.forEach((child) => wrapper.appendChild(child))
+      clone.appendChild(wrapper)
+    }
+
     return new XMLSerializer().serializeToString(clone)
   }, [])
 
