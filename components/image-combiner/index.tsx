@@ -875,7 +875,7 @@ export function ImageCombiner() {
 
                 <div className="mt-4 border-t border-[#2A2A2A] pt-5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-white/40 flex-shrink-0">
                   <a
-                    href="https://v0.dev/chat/template-link-here"
+                    href="https://v0.app/templates/svg-generator-ALKIuzKpHCo?ref=KF9KC4"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white/70 transition-colors flex items-center gap-1"
