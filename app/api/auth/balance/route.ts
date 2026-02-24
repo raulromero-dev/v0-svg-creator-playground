@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { getCredits, AiGatewayError } from "@/lib/ai-gateway"
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -9,21 +10,14 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch("https://ai-gateway.vercel.sh/v1/credits", {
-      headers: {
-        Authorization: `Bearer ${aiGatewayKey}`,
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`AI Gateway error: ${response.status}`)
-    }
-
-    const data = await response.json() as { balance: string; total_used: string }
-    return Response.json({ balance: data.balance, total_used: data.total_used })
+    const credits = await getCredits(aiGatewayKey)
+    return Response.json({ balance: credits.balance, total_used: credits.total_used })
   } catch (err) {
-    console.error("[v0] Failed to fetch balance:", err)
+    if (err instanceof AiGatewayError) {
+      console.error("AI Gateway error fetching balance:", err.message, "status:", err.status)
+      return Response.json({ balance: null, error: err.message }, { status: err.status })
+    }
+    console.error("Failed to fetch balance:", err)
     return Response.json({ balance: null, error: "Failed to fetch balance" }, { status: 500 })
   }
 }
