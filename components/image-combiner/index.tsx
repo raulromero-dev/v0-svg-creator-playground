@@ -117,6 +117,34 @@ export function ImageCombiner() {
   const currentMode = hasImages ? "image-editing" : "text-to-image"
   const canGenerate = prompt.trim().length > 0 && (currentMode === "text-to-image" || (useUrls ? image1Url : image1))
 
+  // Save user input to sessionStorage before OAuth redirect
+  const saveStateBeforeSignIn = useCallback(() => {
+    try {
+      sessionStorage.setItem("v0_pending_input", JSON.stringify({
+        prompt,
+        aspectRatio,
+        image1Url: image1Url || "",
+        image2Url: image2Url || "",
+        useUrls,
+      }))
+    } catch {}
+  }, [prompt, aspectRatio, image1Url, image2Url, useUrls])
+
+  // Restore user input from sessionStorage after OAuth redirect
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("v0_pending_input")
+      if (!saved || !user) return
+      const data = JSON.parse(saved)
+      if (data.prompt) setPrompt(data.prompt)
+      if (data.aspectRatio) setAspectRatio(data.aspectRatio)
+      if (data.image1Url) handleUrlChange(data.image1Url, 1)
+      if (data.image2Url) handleUrlChange(data.image2Url, 2)
+      if (data.useUrls) setUseUrls(data.useUrls)
+      sessionStorage.removeItem("v0_pending_input")
+    } catch {}
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Gate generation on authentication
   const gatedRunGeneration = useCallback(() => {
     if (!user) {
@@ -928,7 +956,7 @@ export function ImageCombiner() {
         />
       )}
 
-      {showSignIn && <SignInOverlay onClose={() => setShowSignIn(false)} />}
+      {showSignIn && <SignInOverlay onClose={() => setShowSignIn(false)} onBeforeSignIn={saveStateBeforeSignIn} />}
     </div>
   )
 }
