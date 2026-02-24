@@ -95,7 +95,7 @@ export function OutputSection({
         disabled={!generatedImage}
         variant="outline"
         size="sm"
-        className="text-xs h-7 px-2 md:px-3 bg-transparent border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 lg:bg-black/80 lg:backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        className="text-xs h-7 px-2 md:px-3 bg-[#1a1a1a] border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
         title="Use as Input"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,8 +108,8 @@ export function OutputSection({
         disabled={!generatedImage}
         variant="outline"
         size="sm"
-        className="text-xs h-7 px-2 md:px-3 bg-transparent border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 lg:bg-black/80 lg:backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        title={isMobile ? "Copy to clipboard" : "Copy to clipboard"}
+        className="text-xs h-7 px-2 md:px-3 bg-[#1a1a1a] border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Copy to clipboard"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" />
@@ -122,7 +122,7 @@ export function OutputSection({
         disabled={!generatedImage}
         variant="outline"
         size="sm"
-        className="text-xs h-7 px-2 md:px-3 bg-transparent border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 lg:bg-black/80 lg:backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        className="text-xs h-7 px-2 md:px-3 bg-[#1a1a1a] border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
         title="Download image"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
