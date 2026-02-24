@@ -256,6 +256,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const clone = svgEl.cloneNode(true) as SVGElement
     clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay, .v0-wireframe-style").forEach((el) => el.remove())
     clone.removeAttribute("id")
+    // Remove overflow="hidden" so exports show all elements including those moved beyond the viewBox
+    clone.removeAttribute("overflow")
     return new XMLSerializer().serializeToString(clone)
   }, [])
 
@@ -269,6 +271,10 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const target = getSelectableElement(e.target as EventTarget)
     if (target) {
       setSelectedElement(target)
+      // Blur any focused text input so Delete/Backspace works for element deletion
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
       e.stopPropagation()
     }
   }, [])
@@ -284,6 +290,10 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     setSelectedElement(target)
     currentElementRef.current = target
+    // Blur any focused text input so Delete/Backspace works for element deletion
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
 
     const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
     if (!svgRoot) return
@@ -804,16 +814,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
         e.stopPropagation()
-        console.log("[v0] Undo requested, stack length:", undoStackRef.current.length)
         const prev = undoStackRef.current.pop()
         if (prev) {
-          console.log("[v0] Restoring previous SVG, remaining stack:", undoStackRef.current.length)
           isUndoingRef.current = true
           lastSvgRef.current = prev
           onSvgChangeRef.current(prev)
           setSelectedElement(null)
-        } else {
-          console.log("[v0] Undo stack empty")
         }
         return
       }
@@ -823,14 +829,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
         const el = selectedElementRef.current
-        console.log("[v0] Delete key pressed, selected element:", el.tagName, el.getAttribute("id"), el.getAttribute("class"))
-        console.log("[v0] Element parent:", el.parentElement?.tagName, el.parentElement?.getAttribute("id"))
-        console.log("[v0] Element in DOM before remove:", document.contains(el))
         el.remove()
-        console.log("[v0] Element in DOM after remove:", document.contains(el))
         setSelectedElement(null)
         const newSvg = serializeSvgRef.current()
-        console.log("[v0] Serialized SVG after delete, length:", newSvg?.length)
         if (newSvg) commitChangeRef.current(newSvg)
       }
     }
