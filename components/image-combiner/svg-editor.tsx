@@ -219,6 +219,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     imported.style.maxWidth = "100%"
     imported.style.maxHeight = "100%"
     imported.setAttribute("id", "editable-svg")
+    imported.setAttribute("overflow", "hidden")
     svgContainerRef.current.appendChild(imported)
 
     setSelectedElement(null)
@@ -820,10 +821,15 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         const activeEl = document.activeElement
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
-        console.log("[v0] Deleting selected element")
-        selectedElementRef.current.remove()
+        const el = selectedElementRef.current
+        console.log("[v0] Delete key pressed, selected element:", el.tagName, el.getAttribute("id"), el.getAttribute("class"))
+        console.log("[v0] Element parent:", el.parentElement?.tagName, el.parentElement?.getAttribute("id"))
+        console.log("[v0] Element in DOM before remove:", document.contains(el))
+        el.remove()
+        console.log("[v0] Element in DOM after remove:", document.contains(el))
         setSelectedElement(null)
         const newSvg = serializeSvgRef.current()
+        console.log("[v0] Serialized SVG after delete, length:", newSvg?.length)
         if (newSvg) commitChangeRef.current(newSvg)
       }
     }
