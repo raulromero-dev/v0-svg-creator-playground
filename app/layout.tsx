@@ -1,10 +1,14 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Suspense } from "react"
+import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/react"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { AuthProvider } from "@/components/image-combiner/auth-context"
 import "./globals.css"
+
+const geistSans = Geist({ subsets: ["latin"] })
+const geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "SVG Generator - Text & Image to SVG with Gemini 3.1",
@@ -87,12 +91,7 @@ export default function RootLayout({
       suppressHydrationWarning
       style={{ backgroundColor: "#0A0A0A" }}
     >
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-sans antialiased" style={{ backgroundColor: "#0A0A0A", fontFamily: "'Google Sans', sans-serif" }}>
+      <body className={`${geistSans.className} font-sans antialiased`} style={{ backgroundColor: "#0A0A0A" }}>
         <AuthProvider>
           <ErrorBoundary>
             <Suspense fallback={null}>{children}</Suspense>
