@@ -237,8 +237,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     imported.style.maxHeight = "100%"
     imported.setAttribute("id", "editable-svg")
     imported.setAttribute("overflow", "hidden")
+    imported.style.overflow = "hidden" // Override any inline style="overflow: visible" from the model
     svgContainerRef.current.appendChild(imported)
-    console.log("[v0] SVG injected, overflow attr:", imported.getAttribute("overflow"))
+    console.log("[v0] SVG injected, overflow attr:", imported.getAttribute("overflow"), "style.overflow:", imported.style.overflow)
 
     setSelectedElement(null)
     lastSvgRef.current = svgCode
@@ -281,19 +282,25 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       bbox.x + bbox.width > vb.x + vb.width ||
       bbox.y + bbox.height > vb.y + vb.height
 
-    console.log("[v0] updateOverflowForBounds: bbox=", bbox, "viewBox=", { x: vb.x, y: vb.y, w: vb.width, h: vb.height }, "extends_beyond=", extends_beyond)
-    svgRoot.setAttribute("overflow", extends_beyond ? "visible" : "hidden")
+    const overflowValue = extends_beyond ? "visible" : "hidden"
+    console.log("[v0] updateOverflowForBounds: bbox=", bbox, "viewBox=", { x: vb.x, y: vb.y, w: vb.width, h: vb.height }, "extends_beyond=", extends_beyond, "setting:", overflowValue)
+    svgRoot.setAttribute("overflow", overflowValue)
+    svgRoot.style.overflow = overflowValue
   }, [])
 
   const serializeSvg = useCallback(() => {
     const svgEl = svgContainerRef.current?.querySelector("#editable-svg")
     if (!svgEl) return null
     // Clone and strip editor overlays before serializing
-    const clone = svgEl.cloneNode(true) as SVGElement
+    const clone = svgEl.cloneNode(true) as SVGSVGElement
     clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay, .v0-wireframe-style").forEach((el) => el.remove())
     clone.removeAttribute("id")
+    // Clean editor-specific inline styles but preserve the overflow value as an attribute
+    const currentOverflow = (svgEl as SVGSVGElement).style.overflow || (svgEl as SVGSVGElement).getAttribute("overflow") || "hidden"
+    clone.removeAttribute("style")
+    clone.setAttribute("overflow", currentOverflow)
     const result = new XMLSerializer().serializeToString(clone)
-    console.log("[v0] serializeSvg, overflow in output:", result.includes('overflow'), "first 200:", result.substring(0, 200))
+    console.log("[v0] serializeSvg, overflow in output:", result.includes('overflow'), "overflow value:", currentOverflow, "first 200:", result.substring(0, 200))
     return result
   }, [])
 

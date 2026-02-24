@@ -277,12 +277,16 @@ export function useImageGeneration({
 
           clearInterval(thinkingInterval)
 
-          // Inject overflow="hidden" to clip any model-generated elements that extend beyond the viewBox
+          // Ensure overflow="hidden" to clip any model-generated elements that extend beyond the viewBox
           if (svgCode) {
-            svgCode = svgCode.replace(/<svg([^>]*)>/, (match, attrs) => {
-              if (/overflow\s*=/.test(attrs)) return match
-              return `<svg${attrs} overflow="hidden">`
-            })
+            // Replace or add the overflow attribute
+            if (/overflow\s*=\s*["'][^"']*["']/.test(svgCode)) {
+              svgCode = svgCode.replace(/overflow\s*=\s*["'][^"']*["']/, 'overflow="hidden"')
+            } else {
+              svgCode = svgCode.replace(/<svg(\s)/, '<svg overflow="hidden"$1')
+            }
+            // Also strip any inline style overflow that could override the attribute
+            svgCode = svgCode.replace(/(style\s*=\s*["'][^"']*)overflow\s*:\s*[^;"']+;?\s*/i, '$1')
           }
 
           if (svgCode) {
