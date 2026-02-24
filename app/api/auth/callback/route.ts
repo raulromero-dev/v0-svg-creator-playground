@@ -37,7 +37,20 @@ export async function GET(request: NextRequest) {
 
     await setAuthCookies(tokenData)
 
+    // Extract user ID (sub) from id_token to use as teamId
+    const idPayload = JSON.parse(Buffer.from(tokenData.id_token.split(".")[1], "base64").toString("utf-8"))
     const cookieStore = await cookies()
+
+    if (idPayload.sub) {
+      cookieStore.set("user_id", idPayload.sub, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/",
+      })
+    }
+
     cookieStore.set("oauth_state", "", { maxAge: 0 })
     cookieStore.set("oauth_nonce", "", { maxAge: 0 })
     cookieStore.set("oauth_code_verifier", "", { maxAge: 0 })

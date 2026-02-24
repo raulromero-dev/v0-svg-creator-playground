@@ -16,23 +16,26 @@ export async function GET() {
       headers: { Authorization: `Bearer ${token}` },
     })
 
+    console.log("[v0] userinfo status:", userInfoResult.status)
+
     if (userInfoResult.status !== 200) {
       return Response.json({ user: null })
     }
 
     const userInfo = await userInfoResult.json()
+    console.log("[v0] userInfo:", JSON.stringify({ name: userInfo.name, email: userInfo.email }))
 
-    // Fetch user profile to get teamId
-    const profileData = await fetchVercelApi<{ user: { defaultTeamId?: string; id: string } }>(
-      "/v2/user",
-      token
-    )
-    const teamId = profileData.user?.defaultTeamId || profileData.user?.id
+    // Use user_id from cookie (extracted from id_token at callback time) as teamId
+    const teamId = cookieStore.get("user_id")?.value
+    console.log("[v0] teamId from cookie:", teamId)
 
     // Exchange access token for AI Gateway key if we don't have one yet
     let aiGatewayKey = cookieStore.get("ai_gateway_key")?.value
+    console.log("[v0] existing ai_gateway_key:", !!aiGatewayKey)
+
     if (!aiGatewayKey && teamId) {
       try {
+        console.log("[v0] Exchanging token for AI Gateway key with teamId:", teamId)
         const data = await fetchVercelApi<{ bearerToken?: string; token?: string }>(
           `/api-keys?teamId=${teamId}`,
           token,
@@ -45,29 +48,32 @@ export async function GET() {
             }),
           }
         )
+        console.log("[v0] Key exchange response keys:", Object.keys(data))
         aiGatewayKey = data.bearerToken || data.token
         if (aiGatewayKey) {
           cookieStore.set("ai_gateway_key", aiGatewayKey, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
-            maxAge: 60 * 60 * 24 * 30, // 30 days
+            maxAge: 60 * 60 * 24 * 30,
             path: "/",
           })
         }
       } catch (err) {
-        console.error("Failed to exchange for AI Gateway key:", err)
+        console.error("[v0] Failed to exchange for AI Gateway key:", err)
       }
     }
 
     // Fetch balance using the AI Gateway helper
     let balance: string | null = null
+    console.log("[v0] aiGatewayKey available for balance:", !!aiGatewayKey)
     if (aiGatewayKey) {
       try {
         const credits = await getCredits(aiGatewayKey)
+        console.log("[v0] credits response:", JSON.stringify(credits))
         balance = credits.balance
       } catch (err) {
-        console.error("Failed to fetch balance:", err)
+        console.error("[v0] Failed to fetch balance:", err)
       }
     }
 
@@ -81,7 +87,8 @@ export async function GET() {
         balance,
       },
     })
-  } catch {
+  } catch (err) {
+    console.error("[v0] User route error:", err)
     return Response.json({ user: null })
   }
 }
