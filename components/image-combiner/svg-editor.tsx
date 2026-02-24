@@ -163,6 +163,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const [zoom, setZoom] = useState(100)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [checkerboard, setCheckerboard] = useState(false)
+  const [wireframe, setWireframe] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pointDragActive, setPointDragActive] = useState(false)
   const [overlayKey, setOverlayKey] = useState(0) // bump to force overlay redraw
@@ -253,7 +254,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     if (!svgEl) return null
     // Clone and strip editor overlays before serializing
     const clone = svgEl.cloneNode(true) as SVGElement
-    clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay").forEach((el) => el.remove())
+    clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay, .v0-wireframe-style").forEach((el) => el.remove())
     clone.removeAttribute("id")
     return new XMLSerializer().serializeToString(clone)
   }, [])
@@ -836,6 +837,59 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     window.addEventListener("keydown", handleKeyDown, true)
     return () => window.removeEventListener("keydown", handleKeyDown, true)
   }, [])
+
+  // Wireframe mode: hold Option/Alt to see blue outlines
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Alt") setWireframe(true)
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Alt") setWireframe(false)
+    }
+    // Also release on blur (e.g. user switches tabs while holding Alt)
+    const handleBlur = () => setWireframe(false)
+
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+    window.addEventListener("blur", handleBlur)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+      window.removeEventListener("blur", handleBlur)
+    }
+  }, [])
+
+  // Inject/remove wireframe stylesheet into the SVG
+  useEffect(() => {
+    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
+    if (!svgRoot) return
+
+    const existingStyle = svgRoot.querySelector("style.v0-wireframe-style")
+
+    if (wireframe) {
+      if (!existingStyle) {
+        const ns = "http://www.w3.org/2000/svg"
+        const style = document.createElementNS(ns, "style")
+        style.setAttribute("class", "v0-wireframe-style")
+        style.textContent = `
+          #editable-svg *:not(.v0-selection-overlay):not(.v0-point-overlay):not(defs):not(defs *):not(style):not(clipPath):not(clipPath *):not(mask):not(mask *) {
+            fill: none !important;
+            stroke: #0D99FF !important;
+            stroke-width: 1px !important;
+            stroke-opacity: 1 !important;
+            opacity: 1 !important;
+          }
+          #editable-svg defs * {
+            fill: none !important;
+            stroke: none !important;
+          }
+        `
+        svgRoot.insertBefore(style, svgRoot.firstChild)
+      }
+    } else {
+      existingStyle?.remove()
+    }
+  }, [wireframe])
 
   const handleZoom = useCallback((newZoom: number) => {
     setZoom(Math.max(10, Math.min(800, newZoom)))
