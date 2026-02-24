@@ -103,7 +103,6 @@ export function ImageCombiner() {
   const selectedGeneration = persistedGenerations.find((g) => g.id === selectedGenerationId) || persistedGenerations[0]
   const isLoading = persistedGenerations.some((g) => g.status === "loading")
   const currentSvgCode = editedSvgCode || selectedGeneration?.svgCode || null
-  console.log("[v0] currentSvgCode source:", editedSvgCode ? "editedSvgCode" : "selectedGeneration.svgCode", "overflow:", currentSvgCode?.includes('overflow'))
   const generatedImage =
     selectedGeneration?.status === "complete" && (selectedGeneration.imageUrl || selectedGeneration.svgCode)
       ? { url: selectedGeneration.imageUrl, prompt: selectedGeneration.prompt, svgCode: currentSvgCode }
@@ -185,7 +184,6 @@ export function ImageCombiner() {
     if (!generatedImage) return
     try {
       if (generatedImage.svgCode) {
-        console.log("[v0] downloadImage: overflow in svgCode:", generatedImage.svgCode.includes('overflow'), "first 200:", generatedImage.svgCode.substring(0, 200))
         const blob = new Blob([generatedImage.svgCode], { type: "image/svg+xml" })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement("a")
@@ -254,7 +252,6 @@ export function ImageCombiner() {
     try {
       // If we have SVG code, copy it as text to clipboard
       if (generatedImage.svgCode) {
-        console.log("[v0] copyImage: overflow in svgCode:", generatedImage.svgCode.includes('overflow'), "first 200:", generatedImage.svgCode.substring(0, 200))
         await navigator.clipboard.writeText(generatedImage.svgCode)
         setToast({ message: "SVG code copied to clipboard!", type: "success" })
         setTimeout(() => setToast(null), 2000)
