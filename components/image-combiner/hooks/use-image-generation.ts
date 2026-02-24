@@ -277,7 +277,7 @@ export function useImageGeneration({
 
           clearInterval(thinkingInterval)
 
-          // Ensure overflow="hidden" to clip any model-generated elements that extend beyond the viewBox
+          // Ensure overflow is clipped to the viewBox in all SVG viewers
           if (svgCode) {
             // Replace or add the overflow attribute
             if (/overflow\s*=\s*["'][^"']*["']/.test(svgCode)) {
@@ -285,8 +285,40 @@ export function useImageGeneration({
             } else {
               svgCode = svgCode.replace(/<svg(\s)/, '<svg overflow="hidden"$1')
             }
-            // Also strip any inline style overflow that could override the attribute
+            // Strip any inline style overflow that could override the attribute
             svgCode = svgCode.replace(/(style\s*=\s*["'][^"']*)overflow\s*:\s*[^;"']+;?\s*/i, '$1')
+
+            // Add a hard clipPath matching the viewBox so overflow is physically clipped in all viewers
+            const clipParser = new DOMParser()
+            const clipDoc = clipParser.parseFromString(svgCode, "image/svg+xml")
+            const clipSvg = clipDoc.querySelector("svg")
+            if (clipSvg) {
+              const vb = clipSvg.viewBox?.baseVal
+              if (vb && (vb.width > 0 || vb.height > 0)) {
+                const ns = "http://www.w3.org/2000/svg"
+                const defs = clipSvg.querySelector("defs") || clipSvg.insertBefore(clipDoc.createElementNS(ns, "defs"), clipSvg.firstChild)
+                const clipPath = clipDoc.createElementNS(ns, "clipPath")
+                clipPath.setAttribute("id", "v0-viewbox-clip")
+                const clipRect = clipDoc.createElementNS(ns, "rect")
+                clipRect.setAttribute("x", String(vb.x))
+                clipRect.setAttribute("y", String(vb.y))
+                clipRect.setAttribute("width", String(vb.width))
+                clipRect.setAttribute("height", String(vb.height))
+                clipPath.appendChild(clipRect)
+                defs.appendChild(clipPath)
+
+                // Wrap all non-defs content in a clipped group
+                const wrapper = clipDoc.createElementNS(ns, "g")
+                wrapper.setAttribute("clip-path", "url(#v0-viewbox-clip)")
+                const children = Array.from(clipSvg.childNodes).filter(
+                  (n) => n !== defs && !(n instanceof Element && n.tagName === "defs")
+                )
+                children.forEach((child) => wrapper.appendChild(child))
+                clipSvg.appendChild(wrapper)
+
+                svgCode = new XMLSerializer().serializeToString(clipSvg)
+              }
+            }
           }
 
           if (svgCode) {

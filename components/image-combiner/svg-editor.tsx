@@ -293,11 +293,10 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     clone.removeAttribute("style")
     clone.setAttribute("overflow", "hidden")
 
-    // Add a hard clipPath matching the viewBox so overflow is physically clipped in all viewers
+    // Ensure a hard clipPath matching the viewBox exists for physical clipping in all viewers
     const vb = clone.viewBox?.baseVal
-    if (vb && (vb.width > 0 || vb.height > 0)) {
-      // Remove any previous export clipPath
-      clone.querySelector("#v0-export-clip")?.remove()
+    const hasExistingClip = clone.querySelector("#v0-viewbox-clip") || clone.querySelector("#v0-export-clip")
+    if (vb && (vb.width > 0 || vb.height > 0) && !hasExistingClip) {
       const ns = "http://www.w3.org/2000/svg"
       const defs = clone.querySelector("defs") || clone.insertBefore(document.createElementNS(ns, "defs"), clone.firstChild)
       const clipPath = document.createElementNS(ns, "clipPath")
