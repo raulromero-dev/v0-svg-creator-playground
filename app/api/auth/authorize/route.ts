@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     code_challenge,
     code_challenge_method: "S256",
     response_type: "code",
-    scope: "openid email profile offline_access",
+    scope: "openid email profile",
   })
 
   const authorizationUrl = `https://vercel.com/oauth/authorize?${queryParams.toString()}`
