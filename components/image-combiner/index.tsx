@@ -18,6 +18,7 @@ import { GlobalDropZone } from "./global-drop-zone"
 import { FullscreenViewer } from "./fullscreen-viewer"
 import { UserMenu } from "./user-menu"
 import { SignInOverlay } from "./sign-in-overlay"
+import { NoCreditsOverlay } from "./no-credits-overlay"
 import { useAuth } from "./auth-context"
 import type { Generation } from "./types"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -37,7 +38,8 @@ export function ImageCombiner() {
   const [dropZoneHover, setDropZoneHover] = useState<1 | 2 | null>(null)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [showSignIn, setShowSignIn] = useState(false)
-  const { user } = useAuth()
+  const [showNoCredits, setShowNoCredits] = useState(false)
+  const { user, balance, refreshBalance } = useAuth()
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [editedSvgCode, setEditedSvgCode] = useState<string | null>(null)
 
@@ -151,14 +153,19 @@ export function ImageCombiner() {
     } catch {}
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Gate generation on authentication
+  // Gate generation on authentication and balance
   const gatedRunGeneration = useCallback(() => {
     if (!user) {
       setShowSignIn(true)
       return
     }
+    const balanceNum = parseFloat(balance ?? "0")
+    if (balanceNum <= 0) {
+      setShowNoCredits(true)
+      return
+    }
     runGeneration()
-  }, [user, runGeneration])
+  }, [user, balance, runGeneration])
 
   // Seed a default generation (golden gate bridge) if history is empty on first load
   const hasSeededRef = useRef(false)
@@ -203,6 +210,13 @@ export function ImageCombiner() {
     // Reset edits when switching generations
     setEditedSvgCode(null)
   }, [selectedGenerationId, selectedGeneration?.imageUrl, setImageLoaded])
+
+  // Refresh balance after a generation completes
+  useEffect(() => {
+    if (selectedGeneration?.status === "complete" && user) {
+      refreshBalance()
+    }
+  }, [selectedGeneration?.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     uploadShowToast.current = showToast
@@ -965,6 +979,7 @@ export function ImageCombiner() {
       )}
 
       {showSignIn && <SignInOverlay onClose={() => setShowSignIn(false)} onBeforeSignIn={saveStateBeforeSignIn} />}
+      {showNoCredits && <NoCreditsOverlay onClose={() => setShowNoCredits(false)} />}
     </div>
   )
 }

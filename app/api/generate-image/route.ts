@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { streamText } from "ai"
+import { cookies } from "next/headers"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -48,6 +49,17 @@ IMPORTANT RULES:
 
 export async function POST(request: NextRequest) {
   try {
+    // Require user's AI Gateway key for generation
+    const cookieStore = await cookies()
+    const aiGatewayKey = cookieStore.get("ai_gateway_key")?.value
+
+    if (!aiGatewayKey) {
+      return NextResponse.json<ErrorResponse>(
+        { error: "Authentication required", message: "Please sign in to generate SVGs" },
+        { status: 401 },
+      )
+    }
+
     const formData = await request.formData()
     const mode = formData.get("mode") as string
     const prompt = formData.get("prompt") as string
@@ -82,6 +94,9 @@ export async function POST(request: NextRequest) {
         model,
         system: systemPrompt,
         prompt: svgPrompt,
+        headers: {
+          Authorization: `Bearer ${aiGatewayKey}`,
+        },
         providerOptions: {
           google: {
             thinking_level: "medium",
@@ -199,6 +214,9 @@ export async function POST(request: NextRequest) {
             content: messageParts,
           },
         ],
+        headers: {
+          Authorization: `Bearer ${aiGatewayKey}`,
+        },
         providerOptions: {
           google: {
             thinking_level: "medium",
