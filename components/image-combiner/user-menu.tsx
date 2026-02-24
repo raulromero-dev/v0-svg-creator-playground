@@ -84,7 +84,7 @@ export function UserMenu() {
             <span className="text-xs font-medium text-white tabular-nums">{formatBalance(balance)}</span>
           </div>
           <a
-            href={user.teamSlug ? `https://vercel.com/${user.teamSlug}/~/ai-gateway` : "https://vercel.com/~/ai-gateway"}
+            href="https://vercel.com/ai-gateway"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
