@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     siteName: "SVG Generator",
     images: [
       {
-        url: "/opengraph-image",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "SVG Generator - AI-Powered Vector Graphics",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     description:
       "Transform your text descriptions and images into high-quality SVG files using Google's Gemini 3.1 AI.",
     creator: "@vercel",
-    images: ["/opengraph-image"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
