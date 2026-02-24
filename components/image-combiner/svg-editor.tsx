@@ -868,7 +868,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-black rounded relative overflow-hidden flex flex-col"
+      className="w-full h-full bg-white rounded relative overflow-hidden flex flex-col"
       onClick={handleContainerClick}
     >
       {/* SVG canvas */}
@@ -887,24 +887,24 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       </div>
 
       {/* Zoom controls - bottom bar, outside the image */}
-      <div className="flex-shrink-0 flex items-center justify-center py-2 bg-black border-t border-white/10">
-        <div className="flex items-center gap-0 bg-black/80 rounded border border-white/10 text-white text-xs font-mono">
+      <div className="flex-shrink-0 flex items-center justify-center py-2 bg-[#f5f5f5] border-t border-black/10">
+        <div className="flex items-center gap-0 bg-white rounded border border-black/15 text-[#333333] text-xs font-mono">
           <button
             onClick={() => handleZoom(zoom - 25)}
-            className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-r border-white/10"
+            className="px-2.5 py-1.5 hover:bg-black/5 transition-colors border-r border-black/15"
           >
             -
           </button>
           <span className="px-3 py-1.5 min-w-[50px] text-center">{Math.round(zoom)}%</span>
           <button
             onClick={() => handleZoom(zoom + 25)}
-            className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
+            className="px-2.5 py-1.5 hover:bg-black/5 transition-colors border-l border-black/15"
           >
             +
           </button>
           <button
             onClick={handleResetView}
-            className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
+            className="px-2.5 py-1.5 hover:bg-black/5 transition-colors border-l border-black/15"
           >
             reset
           </button>
