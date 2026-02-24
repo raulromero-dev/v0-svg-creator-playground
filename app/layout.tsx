@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { Analytics } from "@vercel/analytics/react"
 import { ErrorBoundary } from "@/components/error-boundary"
+import { AuthProvider } from "@/components/image-combiner/auth-context"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -92,9 +93,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans antialiased" style={{ backgroundColor: "#0A0A0A", fontFamily: "'Google Sans', sans-serif" }}>
-        <ErrorBoundary>
-          <Suspense fallback={null}>{children}</Suspense>
-        </ErrorBoundary>
+        <AuthProvider>
+          <ErrorBoundary>
+            <Suspense fallback={null}>{children}</Suspense>
+          </ErrorBoundary>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

@@ -16,6 +16,9 @@ import { ToastNotification } from "./toast-notification"
 import { GenerationHistory } from "./generation-history"
 import { GlobalDropZone } from "./global-drop-zone"
 import { FullscreenViewer } from "./fullscreen-viewer"
+import { UserMenu } from "./user-menu"
+import { SignInOverlay } from "./sign-in-overlay"
+import { useAuth } from "./auth-context"
 import type { Generation } from "./types"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -33,6 +36,8 @@ export function ImageCombiner() {
   const [dragCounter, setDragCounter] = useState(0)
   const [dropZoneHover, setDropZoneHover] = useState<1 | 2 | null>(null)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
+  const [showSignIn, setShowSignIn] = useState(false)
+  const { user } = useAuth()
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [editedSvgCode, setEditedSvgCode] = useState<string | null>(null)
 
@@ -111,6 +116,15 @@ export function ImageCombiner() {
   const hasImages = useUrls ? image1Url || image2Url : image1 || image2
   const currentMode = hasImages ? "image-editing" : "text-to-image"
   const canGenerate = prompt.trim().length > 0 && (currentMode === "text-to-image" || (useUrls ? image1Url : image1))
+
+  // Gate generation on authentication
+  const gatedRunGeneration = useCallback(() => {
+    if (!user) {
+      setShowSignIn(true)
+      return
+    }
+    runGeneration()
+  }, [user, runGeneration])
 
   // Seed a default generation (golden gate bridge) if history is empty on first load
   const hasSeededRef = useRef(false)
@@ -356,11 +370,11 @@ export function ImageCombiner() {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault()
         if (canGenerate) {
-          runGeneration()
+          gatedRunGeneration()
         }
       }
     },
-    [canGenerate, runGeneration],
+    [canGenerate, gatedRunGeneration],
   )
 
   const handleGlobalKeyboard = useCallback(
@@ -742,6 +756,7 @@ export function ImageCombiner() {
                     </p>
                   </div>
                 </div>
+                <UserMenu />
               </div>
               <div className="px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 flex flex-col bg-[#111111]">
 
@@ -773,7 +788,7 @@ export function ImageCombiner() {
                       isConvertingHeic={isConvertingHeic}
                       canGenerate={canGenerate}
                       hasImages={hasImages}
-                      onGenerate={runGeneration}
+                      onGenerate={gatedRunGeneration}
                       onClearAll={clearAll}
                       onImageUpload={handleImageUpload}
                       onUrlChange={handleUrlChange}
@@ -912,6 +927,8 @@ export function ImageCombiner() {
           onNavigate={handleFullscreenNavigate}
         />
       )}
+
+      {showSignIn && <SignInOverlay onClose={() => setShowSignIn(false)} />}
     </div>
   )
 }
