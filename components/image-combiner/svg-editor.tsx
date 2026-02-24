@@ -217,8 +217,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     if (isSelfEditRef.current) {
       isSelfEditRef.current = false
       lastSvgRef.current = svgCode
+      console.log("[v0] Skipping re-injection (self-edit)")
       return
     }
+
+    console.log("[v0] Injecting SVG, overflow in source:", svgCode.includes('overflow="hidden"'), "svgCode length:", svgCode.length)
+    console.log("[v0] First 200 chars:", svgCode.substring(0, 200))
 
     const parser = new DOMParser()
     const doc = parser.parseFromString(svgCode, "image/svg+xml")
@@ -234,6 +238,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     imported.setAttribute("id", "editable-svg")
     imported.setAttribute("overflow", "hidden")
     svgContainerRef.current.appendChild(imported)
+    console.log("[v0] SVG injected, overflow attr:", imported.getAttribute("overflow"))
 
     setSelectedElement(null)
     lastSvgRef.current = svgCode
@@ -276,6 +281,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       bbox.x + bbox.width > vb.x + vb.width ||
       bbox.y + bbox.height > vb.y + vb.height
 
+    console.log("[v0] updateOverflowForBounds: bbox=", bbox, "viewBox=", { x: vb.x, y: vb.y, w: vb.width, h: vb.height }, "extends_beyond=", extends_beyond)
     svgRoot.setAttribute("overflow", extends_beyond ? "visible" : "hidden")
   }, [])
 
@@ -286,7 +292,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const clone = svgEl.cloneNode(true) as SVGElement
     clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay, .v0-wireframe-style").forEach((el) => el.remove())
     clone.removeAttribute("id")
-    return new XMLSerializer().serializeToString(clone)
+    const result = new XMLSerializer().serializeToString(clone)
+    console.log("[v0] serializeSvg, overflow in output:", result.includes('overflow'), "first 200:", result.substring(0, 200))
+    return result
   }, [])
 
   const getSelectableElement = (target: EventTarget | null): SVGElement | null => {
