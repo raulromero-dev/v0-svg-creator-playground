@@ -187,6 +187,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const MAX_UNDO = 50
   const lastSvgRef = useRef<string>(svgCode)
   const isUndoingRef = useRef(false)
+  // Flag to skip re-injection when the SVG change originated from within the editor
+  const isSelfEditRef = useRef(false)
 
   // Wrap onSvgChange to capture previous state for undo
   const commitChange = useCallback((newSvg: string) => {
@@ -196,6 +198,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift()
     }
     lastSvgRef.current = newSvg
+    isSelfEditRef.current = true
     onSvgChange(newSvg)
   }, [onSvgChange])
 
@@ -205,9 +208,18 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const setPointDragActiveRef = useRef(setPointDragActive)
   setPointDragActiveRef.current = setPointDragActive
 
-  // Parse and inject SVG
+  // Parse and inject SVG — only when it's a new generation, switching generations, or undo.
+  // Self-edits (drag, delete, etc.) are applied live on the DOM and don't need re-injection.
   useEffect(() => {
     if (!svgContainerRef.current || !svgCode) return
+
+    // Skip re-injection for edits made within the editor
+    if (isSelfEditRef.current) {
+      isSelfEditRef.current = false
+      lastSvgRef.current = svgCode
+      return
+    }
+
     const parser = new DOMParser()
     const doc = parser.parseFromString(svgCode, "image/svg+xml")
     const svgEl = doc.querySelector("svg")
