@@ -87,30 +87,30 @@ export function HowItWorksModal({ open, onOpenChange }: HowItWorksModalProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <h3 className="text-sm font-bold text-white tracking-wide">Try It Yourself</h3>
+              <h3 className="text-sm font-bold text-white tracking-wide">Try it yourself</h3>
             </div>
             <ol className="space-y-2 text-xs text-white/50">
               <li className="flex items-start gap-2">
                 <span className="text-white font-bold min-w-[16px]">1.</span>
+                <span>Sign in with Vercel.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-white font-bold min-w-[16px]">2.</span>
+                <span>Generate SVGs and edit them.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-white font-bold min-w-[16px]">3.</span>
                 <span>
-                  Copy the template from{" "}
                   <a
-                    href="https://v0.dev"
+                    href="https://v0.app/templates/svg-generator-ALKIuzKpHCo?ref=KF9KC4"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white hover:text-white/70 underline underline-offset-2"
                   >
-                    v0.dev
+                    Duplicate the template
                   </a>
+                  {" "}to tweak it in your own way.
                 </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-white font-bold min-w-[16px]">2.</span>
-                <span>Deploy to Vercel (no API key needed -- uses Vercel AI Gateway)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-white font-bold min-w-[16px]">3.</span>
-                <span>Start generating SVGs</span>
               </li>
             </ol>
           </div>
