@@ -16,14 +16,11 @@ export async function GET() {
       headers: { Authorization: `Bearer ${token}` },
     })
 
-    console.log("[v0] userinfo status:", userInfoResult.status)
-
     if (userInfoResult.status !== 200) {
       return Response.json({ user: null })
     }
 
     const userInfo = await userInfoResult.json()
-    console.log("[v0] userInfo:", JSON.stringify({ name: userInfo.name, email: userInfo.email }))
 
     // Fetch user profile to get teamId
     const profileData = await fetchVercelApi<{ user: { defaultTeamId?: string; id: string } }>(
@@ -31,14 +28,11 @@ export async function GET() {
       token
     )
     const teamId = profileData.user?.defaultTeamId || profileData.user?.id
-    console.log("[v0] teamId:", teamId)
 
     // Exchange access token for AI Gateway key if we don't have one yet
     let aiGatewayKey = cookieStore.get("ai_gateway_key")?.value
-    console.log("[v0] existing ai_gateway_key:", !!aiGatewayKey)
     if (!aiGatewayKey && teamId) {
       try {
-        console.log("[v0] Exchanging token for AI Gateway key with teamId:", teamId)
         const data = await fetchVercelApi<{ bearerToken?: string; token?: string }>(
           `/api-keys?teamId=${teamId}`,
           token,
@@ -51,7 +45,6 @@ export async function GET() {
             }),
           }
         )
-        console.log("[v0] Key exchange response keys:", Object.keys(data))
         aiGatewayKey = data.bearerToken || data.token
         if (aiGatewayKey) {
           cookieStore.set("ai_gateway_key", aiGatewayKey, {
@@ -69,14 +62,12 @@ export async function GET() {
 
     // Fetch balance using the AI Gateway helper
     let balance: string | null = null
-    console.log("[v0] aiGatewayKey available for balance:", !!aiGatewayKey)
     if (aiGatewayKey) {
       try {
         const credits = await getCredits(aiGatewayKey)
-        console.log("[v0] credits response:", JSON.stringify(credits))
         balance = credits.balance
       } catch (err) {
-        console.error("[v0] Failed to fetch balance:", err)
+        console.error("Failed to fetch balance:", err)
       }
     }
 
