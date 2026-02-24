@@ -277,6 +277,14 @@ export function useImageGeneration({
 
           clearInterval(thinkingInterval)
 
+          // Inject overflow="hidden" to clip any model-generated elements that extend beyond the viewBox
+          if (svgCode) {
+            svgCode = svgCode.replace(/<svg([^>]*)>/, (match, attrs) => {
+              if (/overflow\s*=/.test(attrs)) return match
+              return `<svg${attrs} overflow="hidden">`
+            })
+          }
+
           if (svgCode) {
             const svgBlob = new Blob([svgCode], { type: "image/svg+xml" })
             const imageUrl = URL.createObjectURL(svgBlob)

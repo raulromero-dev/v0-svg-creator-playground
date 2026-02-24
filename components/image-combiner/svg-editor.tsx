@@ -261,6 +261,24 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     el.setAttribute("transform", t)
   }
 
+  // Check if any user-edited element extends beyond the viewBox and update overflow accordingly
+  const updateOverflowForBounds = useCallback(() => {
+    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
+    if (!svgRoot) return
+    const vb = svgRoot.viewBox?.baseVal
+    if (!vb || (vb.width === 0 && vb.height === 0)) return
+
+    // Get the bounding box of all visible content
+    const bbox = svgRoot.getBBox()
+    const extends_beyond =
+      bbox.x < vb.x ||
+      bbox.y < vb.y ||
+      bbox.x + bbox.width > vb.x + vb.width ||
+      bbox.y + bbox.height > vb.y + vb.height
+
+    svgRoot.setAttribute("overflow", extends_beyond ? "visible" : "hidden")
+  }, [])
+
   const serializeSvg = useCallback(() => {
     const svgEl = svgContainerRef.current?.querySelector("#editable-svg")
     if (!svgEl) return null
@@ -268,8 +286,6 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const clone = svgEl.cloneNode(true) as SVGElement
     clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay, .v0-wireframe-style").forEach((el) => el.remove())
     clone.removeAttribute("id")
-    // Remove overflow="hidden" so exports show all elements including those moved beyond the viewBox
-    clone.removeAttribute("overflow")
     return new XMLSerializer().serializeToString(clone)
   }, [])
 
@@ -344,13 +360,14 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const handleUp = () => {
       setIsDragging(false)
       dragStartRef.current = null
+      updateOverflowForBounds()
       const newSvg = serializeSvg()
       if (newSvg) commitChange(newSvg)
     }
     window.addEventListener("mousemove", handleMove)
     window.addEventListener("mouseup", handleUp)
     return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp) }
-  }, [isDragging, serializeSvg, commitChange])
+  }, [isDragging, serializeSvg, commitChange, updateOverflowForBounds])
 
   // Point drag effect -- activated by pointDragActive state
   useEffect(() => {
@@ -382,6 +399,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const handleUp = () => {
       pointDragRef.current = null
       setPointDragActive(false)
+      updateOverflowForBounds()
       const newSvg = serializeSvg()
       if (newSvg) commitChange(newSvg)
       // Bump overlay key to force redraw with updated positions
@@ -390,7 +408,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     window.addEventListener("mousemove", handleMove)
     window.addEventListener("mouseup", handleUp)
     return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp) }
-  }, [pointDragActive, serializeSvg, commitChange])
+  }, [pointDragActive, serializeSvg, commitChange, updateOverflowForBounds])
 
   // Draw overlays: bounding box + path points (immediately on selection)
   useEffect(() => {
@@ -489,6 +507,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           window.removeEventListener("mousemove", moveHandler)
           window.removeEventListener("mouseup", upHandler)
           onDragEnd()
+          updateOverflowForBounds()
           const newSvg = serializeSvg()
           if (newSvg) commitChangeRef.current(newSvg)
           setOverlayKey((k) => k + 1)
