@@ -868,7 +868,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-black rounded relative overflow-hidden flex flex-col"
+      className="w-full h-full bg-white rounded relative overflow-hidden flex flex-col"
       onClick={handleContainerClick}
     >
       {/* SVG canvas */}
