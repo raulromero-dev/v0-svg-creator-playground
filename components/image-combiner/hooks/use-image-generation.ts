@@ -133,23 +133,50 @@ export function useImageGeneration({
         setSelectedGenerationId(generationId)
       }
 
-      // Track real streaming progress based on characters received
-      let charsReceived = 0
-      const ESTIMATED_SVG_SIZE = 6000 // conservative baseline for typical SVG output
-      const MAX_PROGRESS = 95 // cap until fully complete
+      // --- Hybrid progress: Phase 1 (thinking) + Phase 2 (streaming) ---
+      const PHASE1_MAX = 40 // synthetic ceiling while model is thinking
+      const PHASE1_DURATION = 40_000 // reach ~40% over 40 seconds
+      const PHASE2_MIN = 40 // streaming band starts here
+      const PHASE2_MAX = 95 // streaming band ends here (100% on complete)
+      const ESTIMATED_SVG_SIZE = 6000
 
-      const updateStreamProgress = (newChars: number) => {
-        charsReceived += newChars
-        // Dynamic estimate: if we've already received more than expected, scale the
-        // estimate up so the bar keeps moving forward but never jumps backward.
-        const estimatedTotal = Math.max(ESTIMATED_SVG_SIZE, charsReceived * 1.15)
-        const rawProgress = (charsReceived / estimatedTotal) * 100
-        const clampedProgress = Math.min(rawProgress, MAX_PROGRESS)
+      let phase1Start = Date.now()
+      let streamingStarted = false
+      let charsReceived = 0
+
+      // Phase 1: synthetic ramp from 0% to 40% with a decaying curve
+      const thinkingInterval = setInterval(() => {
+        if (streamingStarted) return
+        const elapsed = Date.now() - phase1Start
+        // Exponential ease-out: rises quickly at first, decelerates toward cap
+        const t = Math.min(elapsed / PHASE1_DURATION, 1)
+        const eased = 1 - Math.pow(1 - t, 2.5)
+        const progress = eased * PHASE1_MAX
 
         setGenerations((prev) =>
           prev.map((gen) =>
             gen.id === generationId && gen.status === "loading"
-              ? { ...gen, progress: Math.max(gen.progress, clampedProgress) }
+              ? { ...gen, progress: Math.max(gen.progress, progress) }
+              : gen,
+          ),
+        )
+      }, 200)
+
+      // Phase 2: real streaming progress mapped into the 40%-95% band
+      const updateStreamProgress = (newChars: number) => {
+        if (!streamingStarted) {
+          streamingStarted = true
+          clearInterval(thinkingInterval)
+        }
+        charsReceived += newChars
+        const estimatedTotal = Math.max(ESTIMATED_SVG_SIZE, charsReceived * 1.15)
+        const streamFraction = Math.min(charsReceived / estimatedTotal, 1)
+        const progress = PHASE2_MIN + streamFraction * (PHASE2_MAX - PHASE2_MIN)
+
+        setGenerations((prev) =>
+          prev.map((gen) =>
+            gen.id === generationId && gen.status === "loading"
+              ? { ...gen, progress: Math.max(gen.progress, progress) }
               : gen,
           ),
         )
@@ -243,6 +270,8 @@ export function useImageGeneration({
             svgCode = retryMatch ? retryMatch[0] : null
           }
 
+          clearInterval(thinkingInterval)
+
           if (svgCode) {
             const svgBlob = new Blob([svgCode], { type: "image/svg+xml" })
             const imageUrl = URL.createObjectURL(svgBlob)
@@ -273,6 +302,7 @@ export function useImageGeneration({
           playSuccessSound()
         } catch (error) {
           console.error("Error in generation:", error)
+          clearInterval(thinkingInterval)
 
           if (error instanceof Error && error.name === "AbortError") {
             return
