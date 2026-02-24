@@ -163,6 +163,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const [zoom, setZoom] = useState(100)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [checkerboard, setCheckerboard] = useState(false)
+  const [wireframe, setWireframe] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pointDragActive, setPointDragActive] = useState(false)
   const [overlayKey, setOverlayKey] = useState(0) // bump to force overlay redraw
@@ -186,6 +187,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const MAX_UNDO = 50
   const lastSvgRef = useRef<string>(svgCode)
   const isUndoingRef = useRef(false)
+  // Flag to skip re-injection when the SVG change originated from within the editor
+  const isSelfEditRef = useRef(false)
 
   // Wrap onSvgChange to capture previous state for undo
   const commitChange = useCallback((newSvg: string) => {
@@ -195,6 +198,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       if (undoStackRef.current.length > MAX_UNDO) undoStackRef.current.shift()
     }
     lastSvgRef.current = newSvg
+    isSelfEditRef.current = true
     onSvgChange(newSvg)
   }, [onSvgChange])
 
@@ -204,9 +208,18 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const setPointDragActiveRef = useRef(setPointDragActive)
   setPointDragActiveRef.current = setPointDragActive
 
-  // Parse and inject SVG
+  // Parse and inject SVG — only when it's a new generation, switching generations, or undo.
+  // Self-edits (drag, delete, etc.) are applied live on the DOM and don't need re-injection.
   useEffect(() => {
     if (!svgContainerRef.current || !svgCode) return
+
+    // Skip re-injection for edits made within the editor
+    if (isSelfEditRef.current) {
+      isSelfEditRef.current = false
+      lastSvgRef.current = svgCode
+      return
+    }
+
     const parser = new DOMParser()
     const doc = parser.parseFromString(svgCode, "image/svg+xml")
     const svgEl = doc.querySelector("svg")
@@ -220,7 +233,28 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     imported.style.maxHeight = "100%"
     imported.setAttribute("id", "editable-svg")
     imported.setAttribute("overflow", "hidden")
+    imported.style.overflow = "hidden" // Override any inline style="overflow: visible" from the model
     svgContainerRef.current.appendChild(imported)
+
+    // Add viewBox frame overlay to show the artboard boundary
+    const vb = imported.viewBox?.baseVal
+    if (vb && (vb.width > 0 || vb.height > 0)) {
+      const ns = "http://www.w3.org/2000/svg"
+      const frame = document.createElementNS(ns, "rect")
+      frame.setAttribute("class", "v0-frame-overlay")
+      // Inset by 0.5px so the stroke is fully visible within the clipped viewBox
+      frame.setAttribute("x", String(vb.x + 0.5))
+      frame.setAttribute("y", String(vb.y + 0.5))
+      frame.setAttribute("width", String(vb.width - 1))
+      frame.setAttribute("height", String(vb.height - 1))
+      frame.setAttribute("fill", "none")
+      frame.setAttribute("stroke", "#888888")
+      frame.setAttribute("stroke-width", "1")
+      frame.setAttribute("stroke-dasharray", "6 3")
+      frame.setAttribute("pointer-events", "none")
+      frame.style.vectorEffect = "non-scaling-stroke"
+      imported.appendChild(frame)
+    }
 
     setSelectedElement(null)
     lastSvgRef.current = svgCode
@@ -252,9 +286,40 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const svgEl = svgContainerRef.current?.querySelector("#editable-svg")
     if (!svgEl) return null
     // Clone and strip editor overlays before serializing
-    const clone = svgEl.cloneNode(true) as SVGElement
-    clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay").forEach((el) => el.remove())
+    const clone = svgEl.cloneNode(true) as SVGSVGElement
+    clone.querySelectorAll(".v0-selection-overlay, .v0-point-overlay, .v0-wireframe-style, .v0-frame-overlay").forEach((el) => el.remove())
     clone.removeAttribute("id")
+    // Strip editor-specific inline styles and always enforce overflow="hidden"
+    clone.removeAttribute("style")
+    clone.setAttribute("overflow", "hidden")
+
+    // Add a hard clipPath matching the viewBox so overflow is physically clipped in all viewers
+    const vb = clone.viewBox?.baseVal
+    if (vb && (vb.width > 0 || vb.height > 0)) {
+      // Remove any previous export clipPath
+      clone.querySelector("#v0-export-clip")?.remove()
+      const ns = "http://www.w3.org/2000/svg"
+      const defs = clone.querySelector("defs") || clone.insertBefore(document.createElementNS(ns, "defs"), clone.firstChild)
+      const clipPath = document.createElementNS(ns, "clipPath")
+      clipPath.setAttribute("id", "v0-export-clip")
+      const clipRect = document.createElementNS(ns, "rect")
+      clipRect.setAttribute("x", String(vb.x))
+      clipRect.setAttribute("y", String(vb.y))
+      clipRect.setAttribute("width", String(vb.width))
+      clipRect.setAttribute("height", String(vb.height))
+      clipPath.appendChild(clipRect)
+      defs.appendChild(clipPath)
+
+      // Wrap all non-defs content in a clipped group
+      const wrapper = document.createElementNS(ns, "g")
+      wrapper.setAttribute("clip-path", "url(#v0-export-clip)")
+      const children = Array.from(clone.childNodes).filter(
+        (n) => n !== defs && !(n instanceof Element && n.tagName === "defs")
+      )
+      children.forEach((child) => wrapper.appendChild(child))
+      clone.appendChild(wrapper)
+    }
+
     return new XMLSerializer().serializeToString(clone)
   }, [])
 
@@ -268,6 +333,10 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const target = getSelectableElement(e.target as EventTarget)
     if (target) {
       setSelectedElement(target)
+      // Blur any focused text input so Delete/Backspace works for element deletion
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
       e.stopPropagation()
     }
   }, [])
@@ -283,6 +352,10 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
     setSelectedElement(target)
     currentElementRef.current = target
+    // Blur any focused text input so Delete/Backspace works for element deletion
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
 
     const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
     if (!svgRoot) return
@@ -803,16 +876,12 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
         e.stopPropagation()
-        console.log("[v0] Undo requested, stack length:", undoStackRef.current.length)
         const prev = undoStackRef.current.pop()
         if (prev) {
-          console.log("[v0] Restoring previous SVG, remaining stack:", undoStackRef.current.length)
           isUndoingRef.current = true
           lastSvgRef.current = prev
           onSvgChangeRef.current(prev)
           setSelectedElement(null)
-        } else {
-          console.log("[v0] Undo stack empty")
         }
         return
       }
@@ -822,20 +891,68 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         if (activeEl?.tagName === "TEXTAREA" || activeEl?.tagName === "INPUT") return
         e.preventDefault()
         const el = selectedElementRef.current
-        console.log("[v0] Delete key pressed, selected element:", el.tagName, el.getAttribute("id"), el.getAttribute("class"))
-        console.log("[v0] Element parent:", el.parentElement?.tagName, el.parentElement?.getAttribute("id"))
-        console.log("[v0] Element in DOM before remove:", document.contains(el))
         el.remove()
-        console.log("[v0] Element in DOM after remove:", document.contains(el))
         setSelectedElement(null)
         const newSvg = serializeSvgRef.current()
-        console.log("[v0] Serialized SVG after delete, length:", newSvg?.length)
         if (newSvg) commitChangeRef.current(newSvg)
       }
     }
     window.addEventListener("keydown", handleKeyDown, true)
     return () => window.removeEventListener("keydown", handleKeyDown, true)
   }, [])
+
+  // Wireframe mode: hold Option/Alt to see blue outlines
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Alt") setWireframe(true)
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Alt") setWireframe(false)
+    }
+    // Also release on blur (e.g. user switches tabs while holding Alt)
+    const handleBlur = () => setWireframe(false)
+
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+    window.addEventListener("blur", handleBlur)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+      window.removeEventListener("blur", handleBlur)
+    }
+  }, [])
+
+  // Inject/remove wireframe stylesheet into the SVG
+  useEffect(() => {
+    const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
+    if (!svgRoot) return
+
+    const existingStyle = svgRoot.querySelector("style.v0-wireframe-style")
+
+    if (wireframe) {
+      if (!existingStyle) {
+        const ns = "http://www.w3.org/2000/svg"
+        const style = document.createElementNS(ns, "style")
+        style.setAttribute("class", "v0-wireframe-style")
+        style.textContent = `
+          #editable-svg *:not(.v0-selection-overlay):not(.v0-point-overlay):not(defs):not(defs *):not(style):not(clipPath):not(clipPath *):not(mask):not(mask *) {
+            fill: none !important;
+            stroke: #0D99FF !important;
+            stroke-width: 1px !important;
+            stroke-opacity: 1 !important;
+            opacity: 1 !important;
+          }
+          #editable-svg defs * {
+            fill: none !important;
+            stroke: none !important;
+          }
+        `
+        svgRoot.insertBefore(style, svgRoot.firstChild)
+      }
+    } else {
+      existingStyle?.remove()
+    }
+  }, [wireframe])
 
   const handleZoom = useCallback((newZoom: number) => {
     setZoom(Math.max(10, Math.min(800, newZoom)))
