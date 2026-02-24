@@ -25,7 +25,8 @@
   --input: #141414;
   --ring: #FFFFFF;
   --radius: 0.5rem;
-  --font-sans: "Google Sans", sans-serif;
+  --font-sans: "Geist", "Geist Fallback", sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", monospace;
 }
 
 .dark {
@@ -48,11 +49,13 @@
   --border: #2A2A2A;
   --input: #141414;
   --ring: #FFFFFF;
-  --font-sans: "Google Sans", sans-serif;
+  --font-sans: "Geist", "Geist Fallback", sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", monospace;
 }
 
 @theme inline {
   --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -93,7 +96,6 @@
   body {
     @apply bg-background text-foreground;
     background-color: #0A0A0A !important;
-    font-family: "Google Sans", sans-serif !important;
   }
   
   /* Optimize background shader rendering with containment and hardware acceleration */
