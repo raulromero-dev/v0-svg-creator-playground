@@ -143,6 +143,7 @@ export function useImageGeneration({
       let phase1Start = Date.now()
       let streamingStarted = false
       let charsReceived = 0
+      let currentEstimate = ESTIMATED_SVG_SIZE // ratchets up, never recalculated from charsReceived
 
       // Phase 1: synthetic ramp from 0% to 40% with a decaying curve
       const thinkingInterval = setInterval(() => {
@@ -169,8 +170,12 @@ export function useImageGeneration({
           clearInterval(thinkingInterval)
         }
         charsReceived += newChars
-        const estimatedTotal = Math.max(ESTIMATED_SVG_SIZE, charsReceived * 1.15)
-        const streamFraction = Math.min(charsReceived / estimatedTotal, 1)
+        // If we've hit 80% of the current estimate, bump it up by 1.5x
+        // so the bar keeps moving but can still reach the top naturally
+        if (charsReceived > currentEstimate * 0.8) {
+          currentEstimate = Math.ceil(charsReceived * 1.5)
+        }
+        const streamFraction = Math.min(charsReceived / currentEstimate, 1)
         const progress = PHASE2_MIN + streamFraction * (PHASE2_MAX - PHASE2_MIN)
 
         setGenerations((prev) =>
