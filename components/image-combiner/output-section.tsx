@@ -195,19 +195,10 @@ export function OutputSection({
           </div>
         )}
 
-        {/* Desktop Controls Container - Always visible if there are generations */}
-        {generations.length > 0 && (
-          <div className="hidden lg:flex flex-col items-center w-full absolute bottom-6 z-30 pointer-events-none gap-2">
-            {/* Buttons - pointer-events-auto to allow clicking */}
-            <div className="pointer-events-auto">
-              {renderButtons("flex justify-center gap-2 transition-all duration-200")}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Mobile/Tablet buttons - below the image container */}
-      {generations.length > 0 && renderButtons("mt-3 md:mt-4 flex lg:hidden justify-center gap-2 flex-shrink-0")}
+      {/* Action buttons - always below the image/editor, never overlapping */}
+      {generations.length > 0 && renderButtons("mt-3 md:mt-4 flex justify-center gap-2 flex-shrink-0")}
     </div>
   )
 }
