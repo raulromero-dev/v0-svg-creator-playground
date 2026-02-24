@@ -161,6 +161,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const svgContainerRef = useRef<HTMLDivElement>(null)
   const [selectedElement, setSelectedElement] = useState<SVGElement | null>(null)
   const [zoom, setZoom] = useState(100)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [pointDragActive, setPointDragActive] = useState(false)
   const [overlayKey, setOverlayKey] = useState(0) // bump to force overlay redraw
@@ -829,51 +830,86 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     return () => window.removeEventListener("keydown", handleKeyDown, true)
   }, [])
 
-  const handleZoom = (newZoom: number) => {
-    setZoom(Math.max(25, Math.min(400, newZoom)))
-  }
+  const handleZoom = useCallback((newZoom: number) => {
+    setZoom(Math.max(10, Math.min(800, newZoom)))
+  }, [])
+
+  const handleResetView = useCallback(() => {
+    setZoom(100)
+    setPanOffset({ x: 0, y: 0 })
+  }, [])
+
+  // Figma-style wheel: Cmd/Ctrl+scroll = zoom, plain scroll = pan
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+
+      if (e.ctrlKey || e.metaKey) {
+        // Pinch-to-zoom (trackpad sends ctrlKey with pinch) or Cmd+scroll
+        const delta = -e.deltaY
+        const zoomFactor = 1 + delta * 0.01
+        setZoom((prev) => Math.max(10, Math.min(800, prev * zoomFactor)))
+      } else {
+        // Plain two-finger scroll = pan
+        setPanOffset((prev) => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY,
+        }))
+      }
+    }
+
+    container.addEventListener("wheel", handleWheel, { passive: false })
+    return () => container.removeEventListener("wheel", handleWheel)
+  }, [])
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-black rounded relative overflow-hidden"
+      className="w-full h-full bg-black rounded relative overflow-hidden flex flex-col"
       onClick={handleContainerClick}
     >
-      {/* Zoom controls */}
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-0 bg-black/80 backdrop-blur-sm rounded border border-white/10 text-white text-xs font-mono">
-        <button
-          onClick={() => handleZoom(zoom - 25)}
-          className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-r border-white/10"
-        >
-          -
-        </button>
-        <span className="px-3 py-1.5 min-w-[50px] text-center">{zoom}%</span>
-        <button
-          onClick={() => handleZoom(zoom + 25)}
-          className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
-        >
-          +
-        </button>
-        <button
-          onClick={() => handleZoom(100)}
-          className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
-        >
-          reset
-        </button>
+      {/* SVG canvas */}
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <div
+          ref={svgContainerRef}
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            transform: `scale(${zoom / 100}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+            transformOrigin: "center center",
+            cursor: isDragging ? "grabbing" : "default",
+          }}
+          onClick={handleSvgClick}
+          onMouseDown={handleMouseDown}
+        />
       </div>
 
-      {/* SVG canvas */}
-      <div
-        ref={svgContainerRef}
-        className="w-full h-full flex items-center justify-center"
-        style={{
-          transform: `scale(${zoom / 100})`,
-          transformOrigin: "center center",
-          cursor: isDragging ? "grabbing" : "default",
-        }}
-        onClick={handleSvgClick}
-        onMouseDown={handleMouseDown}
-      />
+      {/* Zoom controls - bottom bar, outside the image */}
+      <div className="flex-shrink-0 flex items-center justify-center py-2 bg-black border-t border-white/10">
+        <div className="flex items-center gap-0 bg-black/80 rounded border border-white/10 text-white text-xs font-mono">
+          <button
+            onClick={() => handleZoom(zoom - 25)}
+            className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-r border-white/10"
+          >
+            -
+          </button>
+          <span className="px-3 py-1.5 min-w-[50px] text-center">{Math.round(zoom)}%</span>
+          <button
+            onClick={() => handleZoom(zoom + 25)}
+            className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
+          >
+            +
+          </button>
+          <button
+            onClick={handleResetView}
+            className="px-2.5 py-1.5 hover:bg-white/10 transition-colors border-l border-white/10"
+          >
+            reset
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

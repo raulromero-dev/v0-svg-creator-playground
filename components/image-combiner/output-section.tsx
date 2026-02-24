@@ -95,7 +95,7 @@ export function OutputSection({
         disabled={!generatedImage}
         variant="outline"
         size="sm"
-        className="text-xs h-7 px-2 md:px-3 bg-transparent border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 lg:bg-black/80 lg:backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        className="text-xs h-7 px-2 md:px-3 bg-[#1a1a1a] border-[#333333] text-white hover:bg-gray-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
         title="Use as Input"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,8 +108,8 @@ export function OutputSection({
         disabled={!generatedImage}
         variant="outline"
         size="sm"
-        className="text-xs h-7 px-2 md:px-3 bg-transparent border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 lg:bg-black/80 lg:backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        title={isMobile ? "Copy to clipboard" : "Copy to clipboard"}
+        className="text-xs h-7 px-2 md:px-3 bg-[#1a1a1a] border-[#333333] text-white hover:bg-gray-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Copy to clipboard"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" />
@@ -122,7 +122,7 @@ export function OutputSection({
         disabled={!generatedImage}
         variant="outline"
         size="sm"
-        className="text-xs h-7 px-2 md:px-3 bg-transparent border-gray-600 text-white hover:bg-gray-700 flex items-center gap-1 lg:bg-black/80 lg:backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        className="text-xs h-7 px-2 md:px-3 bg-[#1a1a1a] border-[#333333] text-white hover:bg-gray-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
         title="Download image"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@ export function OutputSection({
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-center py-6 select-none bg-black/20">
             <div>
-              <div className="w-8 h-8 md:w-16 md:h-16 mx-auto mb-3 border border-gray-600 flex items-center justify-center bg-black/50">
+              <div className="w-8 h-8 md:w-16 md:h-16 mx-auto mb-3 border border-[#333333] flex items-center justify-center bg-black/50">
                 <svg
                   className="w-4 h-4 md:w-8 md:h-8 text-gray-400"
                   fill="none"
@@ -195,19 +195,10 @@ export function OutputSection({
           </div>
         )}
 
-        {/* Desktop Controls Container - Always visible if there are generations */}
-        {generations.length > 0 && (
-          <div className="hidden lg:flex flex-col items-center w-full absolute bottom-6 z-30 pointer-events-none gap-2">
-            {/* Buttons - pointer-events-auto to allow clicking */}
-            <div className="pointer-events-auto">
-              {renderButtons("flex justify-center gap-2 transition-all duration-200")}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Mobile/Tablet buttons - below the image container */}
-      {generations.length > 0 && renderButtons("mt-3 md:mt-4 flex lg:hidden justify-center gap-2 flex-shrink-0")}
+      {/* Action buttons - always below the image/editor, never overlapping */}
+      {generations.length > 0 && renderButtons("mt-3 md:mt-4 flex justify-center gap-2 flex-shrink-0")}
     </div>
   )
 }
