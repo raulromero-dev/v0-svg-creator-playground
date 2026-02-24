@@ -751,7 +751,7 @@ export function ImageCombiner() {
                         rel="noopener noreferrer"
                         className="hover:text-gray-300 transition-colors font-medium"
                       >
-                        Gemini 3.1
+                        Gemini 3.1 Pro
                       </a>
                     </p>
                   </div>
