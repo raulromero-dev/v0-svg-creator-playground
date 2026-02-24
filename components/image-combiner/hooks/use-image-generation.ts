@@ -133,31 +133,27 @@ export function useImageGeneration({
         setSelectedGenerationId(generationId)
       }
 
-      const progressInterval = setInterval(() => {
+      // Track real streaming progress based on characters received
+      let charsReceived = 0
+      const ESTIMATED_SVG_SIZE = 6000 // conservative baseline for typical SVG output
+      const MAX_PROGRESS = 95 // cap until fully complete
+
+      const updateStreamProgress = (newChars: number) => {
+        charsReceived += newChars
+        // Dynamic estimate: if we've already received more than expected, scale the
+        // estimate up so the bar keeps moving forward but never jumps backward.
+        const estimatedTotal = Math.max(ESTIMATED_SVG_SIZE, charsReceived * 1.15)
+        const rawProgress = (charsReceived / estimatedTotal) * 100
+        const clampedProgress = Math.min(rawProgress, MAX_PROGRESS)
+
         setGenerations((prev) =>
-          prev.map((gen) => {
-            if (gen.id === generationId && gen.status === "loading") {
-              // Slow, smooth progress that takes ~60-90s to reach 95%
-              const next =
-                gen.progress >= 95
-                  ? 95
-                  : gen.progress >= 90
-                    ? gen.progress + 0.05
-                    : gen.progress >= 80
-                      ? gen.progress + 0.1
-                      : gen.progress >= 60
-                        ? gen.progress + 0.15
-                        : gen.progress >= 40
-                          ? gen.progress + 0.2
-                          : gen.progress >= 20
-                            ? gen.progress + 0.25
-                            : gen.progress + 0.3
-              return { ...gen, progress: Math.min(next, 95) }
-            }
-            return gen
-          }),
+          prev.map((gen) =>
+            gen.id === generationId && gen.status === "loading"
+              ? { ...gen, progress: Math.max(gen.progress, clampedProgress) }
+              : gen,
+          ),
         )
-      }, 300)
+      }
 
       const generationPromise = (async () => {
         try {
@@ -225,6 +221,7 @@ export function useImageGeneration({
                   const parsed = JSON.parse(payload)
                   if (typeof parsed === "string") {
                     fullText += parsed
+                    updateStreamProgress(parsed.length)
                   } else if (parsed.error) {
                     throw new Error(parsed.error)
                   }
@@ -245,8 +242,6 @@ export function useImageGeneration({
             const retryMatch = stripped.match(/<svg[\s\S]*<\/svg>/i)
             svgCode = retryMatch ? retryMatch[0] : null
           }
-
-          clearInterval(progressInterval)
 
           if (svgCode) {
             const svgBlob = new Blob([svgCode], { type: "image/svg+xml" })
@@ -278,7 +273,6 @@ export function useImageGeneration({
           playSuccessSound()
         } catch (error) {
           console.error("Error in generation:", error)
-          clearInterval(progressInterval)
 
           if (error instanceof Error && error.name === "AbortError") {
             return
