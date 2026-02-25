@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { streamText } from "ai"
+import { streamText, createGateway } from "ai"
 import { cookies } from "next/headers"
 
 export const dynamic = "force-dynamic"
@@ -82,8 +82,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Uses Vercel AI Gateway -- zero-config, no API key needed
-    const model = "google/gemini-3.1-pro-preview"
+    // Use the user's AI Gateway key to route through their wallet
+    const gateway = createGateway({ apiKey: aiGatewayKey })
+    const model = gateway("google/gemini-3.1-pro-preview")
 
     if (mode === "text-to-image") {
       const svgPrompt = `Generate an SVG graphic with viewBox="0 0 ${dims.width} ${dims.height}" (aspect ratio: ${aspectRatio}) based on this description: ${prompt}`
@@ -94,9 +95,6 @@ export async function POST(request: NextRequest) {
         model,
         system: systemPrompt,
         prompt: svgPrompt,
-        headers: {
-          Authorization: `Bearer ${aiGatewayKey}`,
-        },
         providerOptions: {
           google: {
             thinking_level: "medium",
@@ -214,9 +212,6 @@ export async function POST(request: NextRequest) {
             content: messageParts,
           },
         ],
-        headers: {
-          Authorization: `Bearer ${aiGatewayKey}`,
-        },
         providerOptions: {
           google: {
             thinking_level: "medium",
