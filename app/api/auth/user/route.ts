@@ -58,7 +58,7 @@ export async function GET() {
           console.log("[v0] Exchanging token for AI Gateway key using:", t.type)
           console.log("[v0] Token prefix:", t.value.substring(0, 10) + "...")
           console.log("[v0] Token length:", t.value.length)
-          const data = await fetchVercelApi<{ bearerToken?: string; token?: string }>(
+          const data = await fetchVercelApi<{ apiKey?: string; apiKeyString?: string; bearerToken?: string }>(
             `/api-keys?teamId=${teamId}`,
             t.value,
           {
@@ -71,7 +71,7 @@ export async function GET() {
           }
         )
           console.log("[v0] Key exchange SUCCESS with:", t.type, "keys:", Object.keys(data))
-          aiGatewayKey = data.bearerToken || data.token
+          aiGatewayKey = data.apiKeyString || data.bearerToken
           if (aiGatewayKey) {
             cookieStore.set("ai_gateway_key", aiGatewayKey, {
               httpOnly: true,
