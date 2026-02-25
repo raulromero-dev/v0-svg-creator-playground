@@ -35,7 +35,11 @@ export async function GET() {
 
     if (!aiGatewayKey && teamId) {
       try {
-        console.log("[v0] Exchanging token for AI Gateway key with teamId:", teamId)
+        const exchangeUrl = `https://api.vercel.com/api-keys?teamId=${teamId}`
+        console.log("[v0] Exchanging token for AI Gateway key")
+        console.log("[v0] URL:", exchangeUrl)
+        console.log("[v0] Token prefix:", token.substring(0, 10) + "...")
+        console.log("[v0] Token length:", token.length)
         const data = await fetchVercelApi<{ bearerToken?: string; token?: string }>(
           `/api-keys?teamId=${teamId}`,
           token,
@@ -61,6 +65,26 @@ export async function GET() {
         }
       } catch (err) {
         console.error("[v0] Failed to exchange for AI Gateway key:", err)
+        // Raw debug: try the same call directly to see full response details
+        try {
+          const rawRes = await fetch(`https://api.vercel.com/api-keys?teamId=${teamId}`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              purpose: "ai-gateway",
+              name: "AI Wallet API Key",
+              exchange: true,
+            }),
+          })
+          const rawBody = await rawRes.text()
+          console.log("[v0] Raw debug - status:", rawRes.status, "headers:", JSON.stringify(Object.fromEntries(rawRes.headers.entries())))
+          console.log("[v0] Raw debug - body:", rawBody)
+        } catch (rawErr) {
+          console.log("[v0] Raw debug fetch also failed:", rawErr)
+        }
       }
     }
 
