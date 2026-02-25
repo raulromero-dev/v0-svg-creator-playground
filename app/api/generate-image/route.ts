@@ -3,7 +3,7 @@ import { streamText, createGateway } from "ai"
 import { cookies } from "next/headers"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 450
+export const maxDuration = 300
 
 const MAX_PROMPT_LENGTH = 5000
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
