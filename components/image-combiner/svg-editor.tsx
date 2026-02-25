@@ -179,6 +179,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const [zoom, setZoom] = useState(100)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [checkerboard, setCheckerboard] = useState(false)
+  const [longPressDelete, setLongPressDelete] = useState<{ x: number; y: number } | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressCancelledRef = useRef(false)
   const [wireframe, setWireframe] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pointDragActive, setPointDragActive] = useState(false)
@@ -346,13 +349,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   // Click to select element
   const handleSvgClick = useCallback((e: React.MouseEvent) => {
     const target = getSelectableElement(e.target as EventTarget)
-    if (target) {
-      setSelectedElement(target)
-      // Blur any focused text input so Delete/Backspace works for element deletion
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur()
-      }
-      e.stopPropagation()
+    if (!target) {
+      setSelectedElement(null)
+      setLongPressDelete(null)
     }
   }, [])
 
@@ -377,6 +376,16 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     setIsDragging(true)
   }, [])
 
+  // Delete selected element (used by long-press on mobile)
+  const handleDeleteElement = useCallback(() => {
+    if (!selectedElementRef.current) return
+    selectedElementRef.current.remove()
+    setSelectedElement(null)
+    setLongPressDelete(null)
+    const newSvg = serializeSvgRef.current()
+    if (newSvg) commitChangeRef.current(newSvg)
+  }, [])
+
   // Mousedown to start element drag (only when not clicking on a point overlay)
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const t = e.target as Element
@@ -388,13 +397,17 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     e.stopPropagation()
   }, [startElementDrag])
 
-  // Touchstart to start element drag on mobile
+  // Touchstart to start element drag on mobile + long-press for delete
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Clear any previous long-press state
+    setLongPressDelete(null)
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+    longPressCancelledRef.current = false
+
     const t = e.target as Element
     if (t.classList?.contains("v0-point-overlay")) return
     const target = getSelectableElement(e.target as EventTarget)
     if (!target) {
-      // Tap on empty area = deselect
       if (e.target === containerRef.current || e.target === svgContainerRef.current) {
         setSelectedElement(null)
       }
@@ -402,6 +415,23 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     }
     const touch = getTouchPoint(e.nativeEvent)
     if (!touch) return
+
+    // Start long-press timer (500ms) -- show delete if finger stays still
+    const touchX = touch.clientX
+    const touchY = touch.clientY
+    longPressTimerRef.current = setTimeout(() => {
+      if (!longPressCancelledRef.current) {
+        // Get position relative to the container
+        const containerRect = containerRef.current?.getBoundingClientRect()
+        if (containerRect) {
+          setLongPressDelete({
+            x: touchX - containerRect.left,
+            y: touchY - containerRect.top - 44, // position above the finger
+          })
+        }
+      }
+    }, 500)
+
     startElementDrag(touch.clientX, touch.clientY, target)
     e.preventDefault()
     e.stopPropagation()
@@ -429,11 +459,19 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const handleMove = (e: MouseEvent) => applyDrag(e.clientX, e.clientY)
     const handleTouchMove = (e: TouchEvent) => {
       const t = getTouchPoint(e)
-      if (t) { e.preventDefault(); applyDrag(t.clientX, t.clientY) }
+      if (t) {
+        e.preventDefault()
+        // Cancel long-press if user moves finger (dragging, not long-press)
+        longPressCancelledRef.current = true
+        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null }
+        setLongPressDelete(null)
+        applyDrag(t.clientX, t.clientY)
+      }
     }
     const handleUp = () => {
       setIsDragging(false)
       dragStartRef.current = null
+      if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null }
       const newSvg = serializeSvg()
       if (newSvg) commitChange(newSvg)
     }
@@ -953,8 +991,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
   // Click outside to deselect
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === containerRef.current || e.target === svgContainerRef.current) {
+    if (e.target === containerRef.current) {
       setSelectedElement(null)
+      setLongPressDelete(null)
     }
   }, [])
 
@@ -1120,6 +1159,25 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           onTouchStart={handleTouchStart}
         />
       </div>
+
+      {/* Mobile long-press delete button */}
+      {longPressDelete && selectedElement && (
+        <button
+          onClick={handleDeleteElement}
+          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteElement() }}
+          className="absolute z-50 flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-xs font-medium rounded shadow-lg shadow-black/40 border border-red-500 active:bg-red-700 transition-colors"
+          style={{
+            left: Math.max(8, Math.min(longPressDelete.x - 40, (containerRef.current?.clientWidth ?? 300) - 100)),
+            top: Math.max(8, longPressDelete.y),
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+          Delete
+        </button>
+      )}
 
       {/* Zoom controls - bottom bar, outside the image */}
       <div className="flex-shrink-0 flex items-center justify-center py-2 bg-black border-t border-white/10">
