@@ -154,6 +154,22 @@ function getPointsAndHandles(commands: PathCmd[]) {
   return { anchors, handles }
 }
 
+// ---- Touch helpers ----
+
+function getTouchPoint(e: TouchEvent): { clientX: number; clientY: number } | null {
+  const touch = e.touches[0] || e.changedTouches[0]
+  return touch ? { clientX: touch.clientX, clientY: touch.clientY } : null
+}
+
+function isTouchDevice(): boolean {
+  return typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0)
+}
+
+// Hit target size: larger on touch devices for finger-friendly interaction
+const ANCHOR_SIZE = () => isTouchDevice() ? 16 : 8
+const ANCHOR_HALF = () => ANCHOR_SIZE() / 2
+const HANDLE_RADIUS = () => isTouchDevice() ? 8 : 4
+
 // ---- Component ----
 
 export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
@@ -163,6 +179,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   const [zoom, setZoom] = useState(100)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [checkerboard, setCheckerboard] = useState(false)
+  const [longPressDelete, setLongPressDelete] = useState<{ x: number; y: number } | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressCancelledRef = useRef(false)
   const [wireframe, setWireframe] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pointDragActive, setPointDragActive] = useState(false)
@@ -330,28 +349,16 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
   // Click to select element
   const handleSvgClick = useCallback((e: React.MouseEvent) => {
     const target = getSelectableElement(e.target as EventTarget)
-    if (target) {
-      setSelectedElement(target)
-      // Blur any focused text input so Delete/Backspace works for element deletion
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur()
-      }
-      e.stopPropagation()
+    if (!target) {
+      setSelectedElement(null)
+      setLongPressDelete(null)
     }
   }, [])
 
-  // Mousedown to start element drag (only when not clicking on a point overlay)
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Check if target is a point overlay element
-    const t = e.target as Element
-    if (t.classList?.contains("v0-point-overlay")) return
-
-    const target = getSelectableElement(e.target as EventTarget)
-    if (!target) return
-
+  // Shared logic for starting an element drag (mouse or touch)
+  const startElementDrag = useCallback((clientX: number, clientY: number, target: SVGElement) => {
     setSelectedElement(target)
     currentElementRef.current = target
-    // Blur any focused text input so Delete/Backspace works for element deletion
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
@@ -361,28 +368,87 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
     const pt = svgRoot.createSVGPoint()
     const ctm = svgRoot.getScreenCTM()
     if (!ctm) return
-    pt.x = e.clientX
-    pt.y = e.clientY
+    pt.x = clientX
+    pt.y = clientY
     const svgP = pt.matrixTransform(ctm.inverse())
     const { tx, ty } = getTranslate(target)
     dragStartRef.current = { x: svgP.x, y: svgP.y, origTx: tx, origTy: ty }
     setIsDragging(true)
-    e.preventDefault()
-    e.stopPropagation()
   }, [])
 
-  // Element drag effect
+  // Delete selected element (used by long-press on mobile)
+  const handleDeleteElement = useCallback(() => {
+    if (!selectedElementRef.current) return
+    selectedElementRef.current.remove()
+    setSelectedElement(null)
+    setLongPressDelete(null)
+    const newSvg = serializeSvgRef.current()
+    if (newSvg) commitChangeRef.current(newSvg)
+  }, [])
+
+  // Mousedown to start element drag (only when not clicking on a point overlay)
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const t = e.target as Element
+    if (t.classList?.contains("v0-point-overlay")) return
+    const target = getSelectableElement(e.target as EventTarget)
+    if (!target) return
+    startElementDrag(e.clientX, e.clientY, target)
+    e.preventDefault()
+    e.stopPropagation()
+  }, [startElementDrag])
+
+  // Touchstart to start element drag on mobile + long-press for delete
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Clear any previous long-press state
+    setLongPressDelete(null)
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+    longPressCancelledRef.current = false
+
+    const t = e.target as Element
+    if (t.classList?.contains("v0-point-overlay")) return
+    const target = getSelectableElement(e.target as EventTarget)
+    if (!target) {
+      if (e.target === containerRef.current || e.target === svgContainerRef.current) {
+        setSelectedElement(null)
+      }
+      return
+    }
+    const touch = getTouchPoint(e.nativeEvent)
+    if (!touch) return
+
+    // Start long-press timer (500ms) -- show delete if finger stays still
+    const touchX = touch.clientX
+    const touchY = touch.clientY
+    longPressTimerRef.current = setTimeout(() => {
+      if (!longPressCancelledRef.current) {
+        // Get position relative to the container
+        const containerRect = containerRef.current?.getBoundingClientRect()
+        if (containerRect) {
+          setLongPressDelete({
+            x: touchX - containerRect.left,
+            y: touchY - containerRect.top - 44, // position above the finger
+          })
+        }
+      }
+    }, 500)
+
+    startElementDrag(touch.clientX, touch.clientY, target)
+    e.preventDefault()
+    e.stopPropagation()
+  }, [startElementDrag])
+
+  // Element drag effect (mouse + touch)
   useEffect(() => {
     if (!isDragging) return
-    const handleMove = (e: MouseEvent) => {
+    const applyDrag = (clientX: number, clientY: number) => {
       if (!dragStartRef.current || !currentElementRef.current) return
       const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
       if (!svgRoot) return
       const pt = svgRoot.createSVGPoint()
       const ctm = svgRoot.getScreenCTM()
       if (!ctm) return
-      pt.x = e.clientX
-      pt.y = e.clientY
+      pt.x = clientX
+      pt.y = clientY
       const svgP = pt.matrixTransform(ctm.inverse())
       setTranslateOnEl(
         currentElementRef.current,
@@ -390,21 +456,43 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         dragStartRef.current.origTy + svgP.y - dragStartRef.current.y,
       )
     }
+    const handleMove = (e: MouseEvent) => applyDrag(e.clientX, e.clientY)
+    const handleTouchMove = (e: TouchEvent) => {
+      const t = getTouchPoint(e)
+      if (t) {
+        e.preventDefault()
+        // Cancel long-press if user moves finger (dragging, not long-press)
+        longPressCancelledRef.current = true
+        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null }
+        setLongPressDelete(null)
+        applyDrag(t.clientX, t.clientY)
+      }
+    }
     const handleUp = () => {
       setIsDragging(false)
       dragStartRef.current = null
+      if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null }
       const newSvg = serializeSvg()
       if (newSvg) commitChange(newSvg)
     }
     window.addEventListener("mousemove", handleMove)
     window.addEventListener("mouseup", handleUp)
-    return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp) }
+    window.addEventListener("touchmove", handleTouchMove, { passive: false })
+    window.addEventListener("touchend", handleUp)
+    window.addEventListener("touchcancel", handleUp)
+    return () => {
+      window.removeEventListener("mousemove", handleMove)
+      window.removeEventListener("mouseup", handleUp)
+      window.removeEventListener("touchmove", handleTouchMove)
+      window.removeEventListener("touchend", handleUp)
+      window.removeEventListener("touchcancel", handleUp)
+    }
   }, [isDragging, serializeSvg, commitChange])
 
-  // Point drag effect -- activated by pointDragActive state
+  // Point drag effect -- activated by pointDragActive state (mouse + touch)
   useEffect(() => {
     if (!pointDragActive) return
-    const handleMove = (e: MouseEvent) => {
+    const applyPointDrag = (clientX: number, clientY: number) => {
       const ref = pointDragRef.current
       if (!ref) return
       const svgRoot = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
@@ -412,8 +500,8 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       const pt = svgRoot.createSVGPoint()
       const ctm = svgRoot.getScreenCTM()
       if (!ctm) return
-      pt.x = e.clientX
-      pt.y = e.clientY
+      pt.x = clientX
+      pt.y = clientY
       const svgP = pt.matrixTransform(ctm.inverse())
       const dx = svgP.x - ref.startSvgX
       const dy = svgP.y - ref.startSvgY
@@ -428,17 +516,30 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       }
       ref.pathElement.setAttribute("d", serializePath(ref.commands))
     }
+    const handleMove = (e: MouseEvent) => applyPointDrag(e.clientX, e.clientY)
+    const handleTouchMove = (e: TouchEvent) => {
+      const t = getTouchPoint(e)
+      if (t) { e.preventDefault(); applyPointDrag(t.clientX, t.clientY) }
+    }
     const handleUp = () => {
       pointDragRef.current = null
       setPointDragActive(false)
       const newSvg = serializeSvg()
       if (newSvg) commitChange(newSvg)
-      // Bump overlay key to force redraw with updated positions
       setOverlayKey((k) => k + 1)
     }
     window.addEventListener("mousemove", handleMove)
     window.addEventListener("mouseup", handleUp)
-    return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp) }
+    window.addEventListener("touchmove", handleTouchMove, { passive: false })
+    window.addEventListener("touchend", handleUp)
+    window.addEventListener("touchcancel", handleUp)
+    return () => {
+      window.removeEventListener("mousemove", handleMove)
+      window.removeEventListener("mouseup", handleUp)
+      window.removeEventListener("touchmove", handleTouchMove)
+      window.removeEventListener("touchend", handleUp)
+      window.removeEventListener("touchcancel", handleUp)
+    }
   }, [pointDragActive, serializeSvg, commitChange])
 
   // Draw overlays: bounding box + path points (immediately on selection)
@@ -501,11 +602,13 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       onDragEnd: () => void,
     ) => {
       const tp = transformPt(x, y)
+      const size = ANCHOR_SIZE()
+      const half = ANCHOR_HALF()
       const rect = document.createElementNS(ns, "rect")
-      rect.setAttribute("x", String(tp.x - 4))
-      rect.setAttribute("y", String(tp.y - 4))
-      rect.setAttribute("width", "8")
-      rect.setAttribute("height", "8")
+      rect.setAttribute("x", String(tp.x - half))
+      rect.setAttribute("y", String(tp.y - half))
+      rect.setAttribute("width", String(size))
+      rect.setAttribute("height", String(size))
       rect.setAttribute("fill", "white")
       rect.setAttribute("stroke", "#333")
       rect.setAttribute("stroke-width", "1")
@@ -513,30 +616,36 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       rect.style.cursor = "pointer"
       rect.style.pointerEvents = "all"
 
-      rect.addEventListener("mousedown", (ev: Event) => {
-        const me = ev as MouseEvent
-        me.stopPropagation()
-        me.preventDefault()
+      // Shared drag start logic for mouse + touch
+      const startDrag = (clientX: number, clientY: number) => {
         const svgR = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
         if (!svgR) return
         const pt = svgR.createSVGPoint()
         const ctm2 = svgR.getScreenCTM()
         if (!ctm2) return
-        pt.x = me.clientX; pt.y = me.clientY
+        pt.x = clientX; pt.y = clientY
         const svgP = pt.matrixTransform(ctm2.inverse())
         const startSvgX = svgP.x, startSvgY = svgP.y
 
-        const moveHandler = (moveEv: MouseEvent) => {
+        const applyMove = (cx: number, cy: number) => {
           const pt2 = svgR.createSVGPoint()
           const ctm3 = svgR.getScreenCTM()
           if (!ctm3) return
-          pt2.x = moveEv.clientX; pt2.y = moveEv.clientY
+          pt2.x = cx; pt2.y = cy
           const mvP = pt2.matrixTransform(ctm3.inverse())
           onDrag(mvP.x - startSvgX, mvP.y - startSvgY, startSvgX, startSvgY)
+        }
+        const moveHandler = (moveEv: MouseEvent) => applyMove(moveEv.clientX, moveEv.clientY)
+        const touchMoveHandler = (moveEv: TouchEvent) => {
+          const tp = getTouchPoint(moveEv)
+          if (tp) { moveEv.preventDefault(); applyMove(tp.clientX, tp.clientY) }
         }
         const upHandler = () => {
           window.removeEventListener("mousemove", moveHandler)
           window.removeEventListener("mouseup", upHandler)
+          window.removeEventListener("touchmove", touchMoveHandler)
+          window.removeEventListener("touchend", upHandler)
+          window.removeEventListener("touchcancel", upHandler)
           onDragEnd()
           const newSvg = serializeSvg()
           if (newSvg) commitChangeRef.current(newSvg)
@@ -544,7 +653,24 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         }
         window.addEventListener("mousemove", moveHandler)
         window.addEventListener("mouseup", upHandler)
+        window.addEventListener("touchmove", touchMoveHandler, { passive: false })
+        window.addEventListener("touchend", upHandler)
+        window.addEventListener("touchcancel", upHandler)
+      }
+
+      rect.addEventListener("mousedown", (ev: Event) => {
+        const me = ev as MouseEvent
+        me.stopPropagation()
+        me.preventDefault()
+        startDrag(me.clientX, me.clientY)
       })
+      rect.addEventListener("touchstart", (ev: Event) => {
+        const te = ev as TouchEvent
+        te.stopPropagation()
+        te.preventDefault()
+        const tp = getTouchPoint(te)
+        if (tp) startDrag(tp.clientX, tp.clientY)
+      }, { passive: false })
 
       svgRoot.appendChild(rect)
     }
@@ -739,7 +865,7 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         const circle = document.createElementNS(ns, "circle")
         circle.setAttribute("cx", String(hp.x))
         circle.setAttribute("cy", String(hp.y))
-        circle.setAttribute("r", "4")
+        circle.setAttribute("r", String(HANDLE_RADIUS()))
         circle.setAttribute("fill", "black")
         circle.setAttribute("stroke", "#555")
         circle.setAttribute("stroke-width", "0.5")
@@ -747,22 +873,17 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         circle.style.cursor = "pointer"
         circle.style.pointerEvents = "all"
 
-        // Native mousedown listener -- uses ref to call React state setter
-        circle.addEventListener("mousedown", (function(cmdIdx: number, valIdx: number, isAbs: boolean, pIdx: number) {
-          return function(ev: Event) {
-            const me = ev as MouseEvent
-            me.stopPropagation()
-            me.preventDefault()
-
+        // Shared start logic for handle drag
+        const startHandleDrag = (function(cmdIdx: number, valIdx: number) {
+          return function(clientX: number, clientY: number) {
             const svgR = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
             if (!svgR) return
             const pt = svgR.createSVGPoint()
             const ctm = svgR.getScreenCTM()
             if (!ctm) return
-            pt.x = me.clientX; pt.y = me.clientY
+            pt.x = clientX; pt.y = clientY
             const svgP = pt.matrixTransform(ctm.inverse())
 
-            // Re-parse the path's current d attribute
             const currentD = pathEl.getAttribute("d")
             if (!currentD) return
             const currentCmds = parsePath(currentD)
@@ -783,7 +904,19 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
             }
             setPointDragActiveRef.current(true)
           }
-        })(h.cmdIndex, h.valueIndex, h.isAbsolute, elIdx))
+        })(h.cmdIndex, h.valueIndex)
+
+        circle.addEventListener("mousedown", (ev: Event) => {
+          const me = ev as MouseEvent
+          me.stopPropagation(); me.preventDefault()
+          startHandleDrag(me.clientX, me.clientY)
+        })
+        circle.addEventListener("touchstart", (ev: Event) => {
+          const te = ev as TouchEvent
+          te.stopPropagation(); te.preventDefault()
+          const tp = getTouchPoint(te)
+          if (tp) startHandleDrag(tp.clientX, tp.clientY)
+        }, { passive: false })
 
         svgRoot.appendChild(circle)
       }
@@ -791,11 +924,13 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
       // --- Anchor points (white squares) ---
       for (const a of anchors) {
         const ap = transformPt(a.x, a.y)
+        const size = ANCHOR_SIZE()
+        const half = ANCHOR_HALF()
         const rect = document.createElementNS(ns, "rect")
-        rect.setAttribute("x", String(ap.x - 4))
-        rect.setAttribute("y", String(ap.y - 4))
-        rect.setAttribute("width", "8")
-        rect.setAttribute("height", "8")
+        rect.setAttribute("x", String(ap.x - half))
+        rect.setAttribute("y", String(ap.y - half))
+        rect.setAttribute("width", String(size))
+        rect.setAttribute("height", String(size))
         rect.setAttribute("fill", "white")
         rect.setAttribute("stroke", "#333")
         rect.setAttribute("stroke-width", "1")
@@ -803,19 +938,15 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
         rect.style.cursor = "pointer"
         rect.style.pointerEvents = "all"
 
-        // Native mousedown listener
-        rect.addEventListener("mousedown", (function(cmdIdx: number, valIdx: number, isAbs: boolean, pIdx: number) {
-          return function(ev: Event) {
-            const me = ev as MouseEvent
-            me.stopPropagation()
-            me.preventDefault()
-
+        // Shared start logic for anchor drag
+        const startAnchorDrag = (function(cmdIdx: number, valIdx: number) {
+          return function(clientX: number, clientY: number) {
             const svgR = svgContainerRef.current?.querySelector("#editable-svg") as SVGSVGElement
             if (!svgR) return
             const pt = svgR.createSVGPoint()
             const ctm = svgR.getScreenCTM()
             if (!ctm) return
-            pt.x = me.clientX; pt.y = me.clientY
+            pt.x = clientX; pt.y = clientY
             const svgP = pt.matrixTransform(ctm.inverse())
 
             const currentD = pathEl.getAttribute("d")
@@ -838,7 +969,19 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
             }
             setPointDragActiveRef.current(true)
           }
-        })(a.cmdIndex, a.valueIndex, a.isAbsolute, elIdx))
+        })(a.cmdIndex, a.valueIndex)
+
+        rect.addEventListener("mousedown", (ev: Event) => {
+          const me = ev as MouseEvent
+          me.stopPropagation(); me.preventDefault()
+          startAnchorDrag(me.clientX, me.clientY)
+        })
+        rect.addEventListener("touchstart", (ev: Event) => {
+          const te = ev as TouchEvent
+          te.stopPropagation(); te.preventDefault()
+          const tp = getTouchPoint(te)
+          if (tp) startAnchorDrag(tp.clientX, tp.clientY)
+        }, { passive: false })
 
         svgRoot.appendChild(rect)
       }
@@ -848,8 +991,9 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
 
   // Click outside to deselect
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === containerRef.current || e.target === svgContainerRef.current) {
+    if (e.target === containerRef.current) {
       setSelectedElement(null)
+      setLongPressDelete(null)
     }
   }, [])
 
@@ -1012,8 +1156,28 @@ export function SvgEditor({ svgCode, onSvgChange }: SvgEditorProps) {
           }}
           onClick={handleSvgClick}
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
         />
       </div>
+
+      {/* Mobile long-press delete button */}
+      {longPressDelete && selectedElement && (
+        <button
+          onClick={handleDeleteElement}
+          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteElement() }}
+          className="absolute z-50 flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-xs font-medium rounded shadow-lg shadow-black/40 border border-red-500 active:bg-red-700 transition-colors"
+          style={{
+            left: Math.max(8, Math.min(longPressDelete.x - 40, (containerRef.current?.clientWidth ?? 300) - 100)),
+            top: Math.max(8, longPressDelete.y),
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+          Delete
+        </button>
+      )}
 
       {/* Zoom controls - bottom bar, outside the image */}
       <div className="flex-shrink-0 flex items-center justify-center py-2 bg-black border-t border-white/10">
