@@ -11,8 +11,15 @@ function VercelLogo({ className }: { className?: string }) {
   )
 }
 
+function formatBalance(balance: string | null): string {
+  if (balance == null) return "--"
+  const num = parseFloat(balance)
+  if (isNaN(num)) return "--"
+  return `$${num.toFixed(2)}`
+}
+
 export function UserMenu() {
-  const { user, isLoading, signOut } = useAuth()
+  const { user, isLoading, balance, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -45,7 +52,8 @@ export function UserMenu() {
   }
 
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={menuRef} className="relative flex items-center gap-2">
+      <span className="text-xs font-medium text-gray-400 tabular-nums">{formatBalance(balance)}</span>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-0 focus:outline-none"
@@ -71,6 +79,19 @@ export function UserMenu() {
             <p className="text-sm font-medium text-white truncate">{user.name}</p>
             <p className="text-xs text-gray-400 truncate">{user.email}</p>
           </div>
+          <div className="px-3 py-2.5 border-b border-[#333333] flex items-center justify-between">
+            <span className="text-xs text-gray-400">Balance</span>
+            <span className="text-xs font-medium text-white tabular-nums">{formatBalance(balance)}</span>
+          </div>
+          <a
+            href="https://vercel.com/ai-gateway"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="block w-full text-left px-3 py-2.5 text-xs text-gray-300 hover:bg-[#252525] hover:text-white transition-colors"
+          >
+            Add credits
+          </a>
           <button
             onClick={async () => {
               setOpen(false)

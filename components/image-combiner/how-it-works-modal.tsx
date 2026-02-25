@@ -43,14 +43,6 @@ function StepCard({
   )
 }
 
-function KbdKey({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="inline-flex items-center px-1.5 py-0.5 bg-white/10 border border-white/20 text-[10px] text-white/70 font-mono">
-      {children}
-    </kbd>
-  )
-}
-
 export function HowItWorksModal({ open, onOpenChange }: HowItWorksModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -157,49 +149,6 @@ export function HowItWorksModal({ open, onOpenChange }: HowItWorksModalProps) {
             <p className="text-xs text-white/40 mt-2">
               Auto-detected from uploaded images. Choose manually for text-to-SVG generation.
             </p>
-          </div>
-
-          {/* Keyboard Shortcuts */}
-          <div className="border border-[#333] bg-black p-4">
-            <h3 className="text-sm font-bold text-white mb-3 tracking-wide">Keyboard Shortcuts</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-white/40">Generate</span>
-                <div className="flex items-center gap-1">
-                  <KbdKey>{'⌘'}</KbdKey>
-                  <span className="text-white/20">+</span>
-                  <KbdKey>{'↵'}</KbdKey>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-white/40">Copy SVG</span>
-                <div className="flex items-center gap-1">
-                  <KbdKey>{'⌘'}</KbdKey>
-                  <span className="text-white/20">+</span>
-                  <KbdKey>C</KbdKey>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-white/40">Download</span>
-                <div className="flex items-center gap-1">
-                  <KbdKey>{'⌘'}</KbdKey>
-                  <span className="text-white/20">+</span>
-                  <KbdKey>D</KbdKey>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-white/40">Use as Input</span>
-                <div className="flex items-center gap-1">
-                  <KbdKey>{'⌘'}</KbdKey>
-                  <span className="text-white/20">+</span>
-                  <KbdKey>U</KbdKey>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-white/40">Close Fullscreen</span>
-                <KbdKey>Esc</KbdKey>
-              </div>
-            </div>
           </div>
 
           {/* Footer pixel bar */}

@@ -28,6 +28,8 @@ export async function POST() {
 
   cookieStore.set("access_token", "", { maxAge: 0 })
   cookieStore.set("refresh_token", "", { maxAge: 0 })
+  cookieStore.set("ai_gateway_key", "", { maxAge: 0 })
+  cookieStore.set("user_id", "", { maxAge: 0 })
 
   return Response.json({}, { status: 200 })
 }

@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { streamText } from "ai"
+import { streamText, createGateway } from "ai"
+import { cookies } from "next/headers"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 300
+export const maxDuration = 450
 
 const MAX_PROMPT_LENGTH = 5000
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -48,6 +49,17 @@ IMPORTANT RULES:
 
 export async function POST(request: NextRequest) {
   try {
+    // Require user's AI Gateway key for generation
+    const cookieStore = await cookies()
+    const aiGatewayKey = cookieStore.get("ai_gateway_key")?.value
+
+    if (!aiGatewayKey) {
+      return NextResponse.json<ErrorResponse>(
+        { error: "Authentication required", message: "Please sign in to generate SVGs" },
+        { status: 401 },
+      )
+    }
+
     const formData = await request.formData()
     const mode = formData.get("mode") as string
     const prompt = formData.get("prompt") as string
@@ -70,8 +82,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Uses Vercel AI Gateway -- zero-config, no API key needed
-    const model = "google/gemini-3.1-pro-preview"
+    // Use the user's AI Gateway key to route through their wallet
+    const gateway = createGateway({ apiKey: aiGatewayKey })
+    const model = gateway("google/gemini-3.1-pro-preview")
 
     if (mode === "text-to-image") {
       const svgPrompt = `Generate an SVG graphic with viewBox="0 0 ${dims.width} ${dims.height}" (aspect ratio: ${aspectRatio}) based on this description: ${prompt}`

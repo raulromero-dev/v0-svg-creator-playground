@@ -16,8 +16,6 @@ export async function GET(request: NextRequest) {
     const code = url.searchParams.get("code")
     const state = url.searchParams.get("state")
 
-    console.log("[v0] Callback hit. Origin:", request.nextUrl.origin, "Full URL:", request.url)
-
     if (!code) {
       throw new Error("Authorization code is required")
     }
@@ -26,19 +24,19 @@ export async function GET(request: NextRequest) {
     const storedNonce = request.cookies.get("oauth_nonce")?.value
     const codeVerifier = request.cookies.get("oauth_code_verifier")?.value
 
-    console.log("[v0] Cookies - state exists:", !!storedState, "nonce exists:", !!storedNonce, "verifier exists:", !!codeVerifier)
-    console.log("[v0] State match:", state === storedState)
-
     if (!validate(state, storedState)) {
       throw new Error(`State mismatch - received: ${state?.substring(0, 8)}... stored: ${storedState?.substring(0, 8)}...`)
     }
 
-    console.log("[v0] Exchanging code for token with origin:", request.nextUrl.origin)
     const tokenData = await exchangeCodeForToken(code, codeVerifier, request.nextUrl.origin)
-    console.log("[v0] Token exchange successful, has id_token:", !!tokenData.id_token)
-    
+    console.log("[v0] Token response keys:", Object.keys(tokenData))
+    console.log("[v0] Token response scope:", tokenData.scope)
+    console.log("[v0] Has refresh_token:", !!tokenData.refresh_token)
+    console.log("[v0] access_token prefix:", tokenData.access_token?.substring(0, 10))
+    if (tokenData.refresh_token) {
+      console.log("[v0] refresh_token prefix:", tokenData.refresh_token.substring(0, 10))
+    }
     const decodedNonce = decodeNonce(tokenData.id_token)
-    console.log("[v0] Nonce match:", decodedNonce === storedNonce)
 
     if (!validate(decodedNonce, storedNonce)) {
       throw new Error("Nonce mismatch")
@@ -46,7 +44,20 @@ export async function GET(request: NextRequest) {
 
     await setAuthCookies(tokenData)
 
+    // Extract user ID (sub) from id_token to use as teamId
+    const idPayload = JSON.parse(Buffer.from(tokenData.id_token.split(".")[1], "base64").toString("utf-8"))
     const cookieStore = await cookies()
+
+    if (idPayload.sub) {
+      cookieStore.set("user_id", idPayload.sub, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/",
+      })
+    }
+
     cookieStore.set("oauth_state", "", { maxAge: 0 })
     cookieStore.set("oauth_nonce", "", { maxAge: 0 })
     cookieStore.set("oauth_code_verifier", "", { maxAge: 0 })
@@ -54,8 +65,7 @@ export async function GET(request: NextRequest) {
     // Redirect back to the main app page
     return Response.redirect(new URL("/", request.url))
   } catch (error) {
-    console.error("[v0] OAuth callback error:", error instanceof Error ? error.message : error)
-    console.error("[v0] Full error:", error)
+    console.error("OAuth callback error:", error instanceof Error ? error.message : error)
     return Response.redirect(new URL("/?auth_error=true", request.url))
   }
 }
