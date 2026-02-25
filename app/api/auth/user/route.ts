@@ -25,19 +25,17 @@ export async function GET() {
     const userInfo = await userInfoResult.json()
     console.log("[v0] userInfo:", JSON.stringify({ name: userInfo.name, email: userInfo.email, sub: userInfo.sub }))
 
-    // Fetch the user's actual team ID from the Teams API (requires "Read Team" permission)
+    // Fetch the user's default team ID from the Vercel User API
     let teamId: string | null = null
     try {
-      const teamsData = await fetchVercelApi<{ teams: { id: string; slug: string; name: string }[] }>(
-        "/v2/teams",
+      const userData = await fetchVercelApi<{ user: { defaultTeamId?: string; id: string } }>(
+        "/v2/user",
         token
       )
-      console.log("[v0] Teams response:", JSON.stringify(teamsData.teams?.map((t: { id: string; slug: string }) => ({ id: t.id, slug: t.slug }))))
-      if (teamsData.teams?.length > 0) {
-        teamId = teamsData.teams[0].id
-      }
+      teamId = userData.user?.defaultTeamId || userData.user?.id || null
+      console.log("[v0] defaultTeamId:", userData.user?.defaultTeamId, "userId:", userData.user?.id)
     } catch (err) {
-      console.error("[v0] Failed to fetch teams:", err instanceof Error ? err.message : err)
+      console.error("[v0] Failed to fetch user:", err instanceof Error ? err.message : err)
     }
     console.log("[v0] teamId (resolved):", teamId)
 
