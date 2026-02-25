@@ -34,15 +34,21 @@ export async function GET() {
     console.log("[v0] existing ai_gateway_key:", !!aiGatewayKey)
 
     if (!aiGatewayKey && teamId) {
-      try {
-        const exchangeUrl = `https://api.vercel.com/api-keys?teamId=${teamId}`
-        console.log("[v0] Exchanging token for AI Gateway key")
-        console.log("[v0] URL:", exchangeUrl)
-        console.log("[v0] Token prefix:", token.substring(0, 10) + "...")
-        console.log("[v0] Token length:", token.length)
-        const data = await fetchVercelApi<{ bearerToken?: string; token?: string }>(
-          `/api-keys?teamId=${teamId}`,
-          token,
+      // Try both tokens - refresh_token may have broader API access than access_token
+      const refreshToken = cookieStore.get("refresh_token")?.value
+      const tokensToTry = [
+        ...(refreshToken ? [{ value: refreshToken, type: "refresh_token" }] : []),
+        { value: token, type: "access_token" },
+      ]
+
+      for (const t of tokensToTry) {
+        try {
+          console.log("[v0] Exchanging token for AI Gateway key using:", t.type)
+          console.log("[v0] Token prefix:", t.value.substring(0, 10) + "...")
+          console.log("[v0] Token length:", t.value.length)
+          const data = await fetchVercelApi<{ bearerToken?: string; token?: string }>(
+            `/api-keys?teamId=${teamId}`,
+            t.value,
           {
             method: "POST",
             body: JSON.stringify({
@@ -52,38 +58,20 @@ export async function GET() {
             }),
           }
         )
-        console.log("[v0] Key exchange response keys:", Object.keys(data))
-        aiGatewayKey = data.bearerToken || data.token
-        if (aiGatewayKey) {
-          cookieStore.set("ai_gateway_key", aiGatewayKey, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            maxAge: 60 * 60 * 24 * 30,
-            path: "/",
-          })
-        }
-      } catch (err) {
-        console.error("[v0] Failed to exchange for AI Gateway key:", err)
-        // Raw debug: try the same call directly to see full response details
-        try {
-          const rawRes = await fetch(`https://api.vercel.com/api-keys?teamId=${teamId}`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              purpose: "ai-gateway",
-              name: "AI Wallet API Key",
-              exchange: true,
-            }),
-          })
-          const rawBody = await rawRes.text()
-          console.log("[v0] Raw debug - status:", rawRes.status, "headers:", JSON.stringify(Object.fromEntries(rawRes.headers.entries())))
-          console.log("[v0] Raw debug - body:", rawBody)
-        } catch (rawErr) {
-          console.log("[v0] Raw debug fetch also failed:", rawErr)
+          console.log("[v0] Key exchange SUCCESS with:", t.type, "keys:", Object.keys(data))
+          aiGatewayKey = data.bearerToken || data.token
+          if (aiGatewayKey) {
+            cookieStore.set("ai_gateway_key", aiGatewayKey, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "lax",
+              maxAge: 60 * 60 * 24 * 30,
+              path: "/",
+            })
+          }
+          break // success, stop trying
+        } catch (err) {
+          console.error(`[v0] Failed with ${t.type}:`, err instanceof Error ? err.message : err)
         }
       }
     }
