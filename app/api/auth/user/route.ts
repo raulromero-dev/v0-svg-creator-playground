@@ -23,11 +23,14 @@ export async function GET() {
     }
 
     const userInfo = await userInfoResult.json()
-    console.log("[v0] userInfo:", JSON.stringify({ name: userInfo.name, email: userInfo.email }))
+    console.log("[v0] userInfo all keys:", JSON.stringify(Object.keys(userInfo)))
+    console.log("[v0] userInfo:", JSON.stringify({ name: userInfo.name, email: userInfo.email, teamId: userInfo.teamId, sub: userInfo.sub }))
 
-    // Use user_id from cookie (extracted from id_token at callback time) as teamId
-    const teamId = cookieStore.get("user_id")?.value
-    console.log("[v0] teamId from cookie:", teamId)
+    // Get teamId: prefer userinfo.teamId, fall back to user_id cookie with team_ prefix
+    const rawUserId = cookieStore.get("user_id")?.value
+    const teamId = userInfo.teamId || (rawUserId ? `team_${rawUserId}` : null)
+    console.log("[v0] rawUserId from cookie:", rawUserId)
+    console.log("[v0] teamId (resolved):", teamId)
 
     // Exchange access token for AI Gateway key if we don't have one yet
     let aiGatewayKey = cookieStore.get("ai_gateway_key")?.value
