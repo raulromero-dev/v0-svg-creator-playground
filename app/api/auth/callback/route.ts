@@ -29,6 +29,13 @@ export async function GET(request: NextRequest) {
     }
 
     const tokenData = await exchangeCodeForToken(code, codeVerifier, request.nextUrl.origin)
+    console.log("[v0] Token response keys:", Object.keys(tokenData))
+    console.log("[v0] Token response scope:", tokenData.scope)
+    console.log("[v0] Has refresh_token:", !!tokenData.refresh_token)
+    console.log("[v0] access_token prefix:", tokenData.access_token?.substring(0, 10))
+    if (tokenData.refresh_token) {
+      console.log("[v0] refresh_token prefix:", tokenData.refresh_token.substring(0, 10))
+    }
     const decodedNonce = decodeNonce(tokenData.id_token)
 
     if (!validate(decodedNonce, storedNonce)) {
