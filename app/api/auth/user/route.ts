@@ -23,13 +23,22 @@ export async function GET() {
     }
 
     const userInfo = await userInfoResult.json()
-    console.log("[v0] userInfo all keys:", JSON.stringify(Object.keys(userInfo)))
-    console.log("[v0] userInfo:", JSON.stringify({ name: userInfo.name, email: userInfo.email, teamId: userInfo.teamId, sub: userInfo.sub }))
+    console.log("[v0] userInfo:", JSON.stringify({ name: userInfo.name, email: userInfo.email, sub: userInfo.sub }))
 
-    // Get teamId: prefer userinfo.teamId, fall back to user_id cookie with team_ prefix
-    const rawUserId = cookieStore.get("user_id")?.value
-    const teamId = userInfo.teamId || (rawUserId ? `team_${rawUserId}` : null)
-    console.log("[v0] rawUserId from cookie:", rawUserId)
+    // Fetch the user's actual team ID from the Teams API (requires "Read Team" permission)
+    let teamId: string | null = null
+    try {
+      const teamsData = await fetchVercelApi<{ teams: { id: string; slug: string; name: string }[] }>(
+        "/v2/teams",
+        token
+      )
+      console.log("[v0] Teams response:", JSON.stringify(teamsData.teams?.map((t: { id: string; slug: string }) => ({ id: t.id, slug: t.slug }))))
+      if (teamsData.teams?.length > 0) {
+        teamId = teamsData.teams[0].id
+      }
+    } catch (err) {
+      console.error("[v0] Failed to fetch teams:", err instanceof Error ? err.message : err)
+    }
     console.log("[v0] teamId (resolved):", teamId)
 
     // Exchange access token for AI Gateway key if we don't have one yet
